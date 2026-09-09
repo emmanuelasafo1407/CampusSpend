@@ -1,0 +1,280 @@
+@page "/goals"
+@rendermode InteractiveServer
+@using CampusSpend.Models
+@using CampusSpend.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>Goals & Achievements — CampusSpend</PageTitle>
+
+<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+    <!-- Active Goals -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Savings Vault & Targets</h2>
+            <small class="text-muted">Allocate funds toward laptops, project kits, or emergency reserves.</small>
+        </div>
+        <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenNewGoalModal">
+            <i class="bi bi-plus-circle me-1"></i> New Savings Goal
+        </button>
+    </div>
+
+    <!-- Active Targets Grid -->
+    <h5 class="fw-bold mb-3 text-secondary">Active Campaigns (@activeGoals.Count)</h5>
+    <div class="row g-3 mb-5">
+        @if (activeGoals.Count == 0)
+        {
+            <div class="col-12">
+                <div class="card p-4 text-center border-0 shadow-sm bg-white">
+                    <p class="text-muted mb-0">No active savings targets. Click "+ New Savings Goal" to create one!</p>
+                </div>
+            </div>
+        }
+        @foreach (var g in activeGoals)
+        {
+            var percent = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
+            <div class="col-md-6 col-xl-4">
+                <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold fs-5 text-dark">@g.Title</span>
+                        <span class="badge @(g.IsCompleted ? "bg-success" : "bg-primary")">
+                            @(g.IsCompleted ? "100% Ready 🎉" : "In Progress")
+                        </span>
+                    </div>
+
+                    <div class="small text-muted mb-2">
+                        Target: GHS @g.TargetAmount.ToString("N2") | Saved: <strong class="text-primary">GHS @g.CurrentSaved.ToString("N2")</strong>
+                    </div>
+
+                    <div class="progress mb-3 rounded-pill" style="height: 10px;">
+                        <div class="progress-bar rounded-pill @(g.IsCompleted ? "bg-success" : "bg-primary")"
+                             style="width: @(Math.Min(100, percent))%"></div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-auto">
+                        @if (!g.IsCompleted)
+                        {
+                            <button class="btn btn-sm btn-success flex-fill" @onclick="() => OpenDepositModal(g)">
+                                <i class="bi bi-cash-stack me-1"></i> Deposit
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-warning text-dark fw-bold flex-fill" @onclick="() => ArchiveGoal(g)">
+                                <i class="bi bi-trophy-fill me-1"></i> Claim to Achievements
+                            </button>
+                        }
+                        <button class="btn btn-sm btn-outline-secondary" title="Edit" @onclick="() => OpenEditGoalModal(g)">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" title="Delete" @onclick="() => DeleteGoal(g.Id)">✕</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Achievements / Completed Goals Section -->
+    <div class="border-top pt-4">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-trophy-fill text-warning fs-3 me-2"></i>
+            <div>
+                <h4 class="fw-bold mb-0 text-dark">Hall of Achievements</h4>
+                <small class="text-muted">Targets achieved and claimed.</small>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            @if (achievedGoals.Count == 0)
+            {
+                <div class="col-12">
+                    <div class="p-3 text-center text-muted border rounded bg-white small">
+                        No completed achievements archived yet. Complete a goal and hit "Claim" to preserve it here!
+                    </div>
+                </div>
+            }
+            @foreach (var a in achievedGoals)
+            {
+                <div class="col-md-6 col-xl-4">
+                    <div class="card stat-card shadow-sm border-0 border-start border-4 border-success p-3 bg-white">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-success fs-6">🏆 @a.Title</span>
+                            <span class="badge bg-success-subtle text-success border border-success">Unlocked</span>
+                        </div>
+                        <div class="small text-muted mb-2">Funded: GHS @a.TargetAmount.ToString("N2")</div>
+                        <small class="text-muted">Archived on: @(a.CompletedAt?.ToString("dd MMM yyyy") ?? "Recently")</small>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Create / Edit Goal -->
+@if (showGoalModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">@(editingGoalId.HasValue ? "Update Goal" : "New Savings Target")</h5>
+                    <button type="button" class="btn-close" @onclick="() => showGoalModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Title:</label>
+                        <input type="text" class="form-control" @bind="goalModel.Title" placeholder="e.g. Engineering Drone Components" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Target Budget (GHS):</label>
+                        <input type="number" class="form-control" @bind="goalModel.TargetAmount" />
+                    </div>
+                    @if (!editingGoalId.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Initial Seed Deposit (GHS):</label>
+                            <input type="number" class="form-control" @bind="goalModel.CurrentSaved" />
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showGoalModal = false">Cancel</button>
+                    <button class="btn btn-success" @onclick="SaveGoal">Save Target</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal 2: Custom Deposit -->
+@if (showDepositModal && selectedGoal != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold">Deposit to: @selectedGoal.Title</h6>
+                    <button type="button" class="btn-close" @onclick="() => showDepositModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label small fw-semibold">Amount to Deposit (GHS):</label>
+                    <input type="number" class="form-control" @bind="customDepositAmount" min="1" />
+                    <small class="text-muted d-block mt-1">Needed: GHS @(Math.Max(0, selectedGoal.TargetAmount - selectedGoal.CurrentSaved).ToString("N2"))</small>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => showDepositModal = false">Cancel</button>
+                    <button class="btn btn-sm btn-success" @onclick="ConfirmDeposit">Deposit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SavingsGoal> activeGoals = new();
+    private List<SavingsGoal> achievedGoals = new();
+    private SavingsGoal goalModel = new();
+    private SavingsGoal? selectedGoal = null;
+    private int? editingGoalId = null;
+    private decimal customDepositAmount = 50.00m;
+    private bool showGoalModal = false;
+    private bool showDepositModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGoalsAsync();
+    }
+
+    private async Task LoadGoalsAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
+        achievedGoals = await db.SavingsGoals.Where(g => g.IsArchived).OrderByDescending(g => g.CompletedAt).ToListAsync();
+    }
+
+    private void OpenNewGoalModal()
+    {
+        editingGoalId = null;
+        goalModel = new SavingsGoal();
+        showGoalModal = true;
+    }
+
+    private void OpenEditGoalModal(SavingsGoal g)
+    {
+        editingGoalId = g.Id;
+        goalModel = new SavingsGoal
+        {
+            Id = g.Id,
+            Title = g.Title,
+            TargetAmount = g.TargetAmount,
+            CurrentSaved = g.CurrentSaved
+        };
+        showGoalModal = true;
+    }
+
+    private async Task SaveGoal()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (editingGoalId.HasValue)
+        {
+            var match = await db.SavingsGoals.FindAsync(editingGoalId.Value);
+            if (match != null)
+            {
+                match.Title = goalModel.Title;
+                match.TargetAmount = goalModel.TargetAmount;
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            db.SavingsGoals.Add(goalModel);
+            await db.SaveChangesAsync();
+        }
+        showGoalModal = false;
+        await LoadGoalsAsync();
+    }
+
+    private void OpenDepositModal(SavingsGoal g)
+    {
+        selectedGoal = g;
+        customDepositAmount = 50.00m;
+        showDepositModal = true;
+    }
+
+    private async Task ConfirmDeposit()
+    {
+        if (selectedGoal == null || customDepositAmount <= 0) return;
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SavingsGoals.FindAsync(selectedGoal.Id);
+        if (match != null)
+        {
+            match.CurrentSaved = Math.Min(match.TargetAmount, match.CurrentSaved + customDepositAmount);
+            await db.SaveChangesAsync();
+        }
+        showDepositModal = false;
+        await LoadGoalsAsync();
+    }
+
+    private async Task ArchiveGoal(SavingsGoal g)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SavingsGoals.FindAsync(g.Id);
+        if (match != null)
+        {
+            match.IsArchived = true;
+            match.CompletedAt = DateTime.Now;
+            await db.SaveChangesAsync();
+        }
+        await LoadGoalsAsync();
+    }
+
+    private async Task DeleteGoal(int id)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SavingsGoals.FindAsync(id);
+        if (match != null)
+        {
+            db.SavingsGoals.Remove(match);
+            await db.SaveChangesAsync();
+        }
+        await LoadGoalsAsync();
+    }
+}

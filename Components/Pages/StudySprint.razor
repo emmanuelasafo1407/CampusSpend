@@ -1,0 +1,540 @@
+@page "/study"
+@rendermode InteractiveServer
+@using CampusSpend.Models
+@using CampusSpend.Data
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>StudySprint — Semester & Revision Command</PageTitle>
+
+<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">StudySprint Academic Command</h2>
+            <small class="text-muted">Track registered semester courses, slide deck mastery, and revision topics.</small>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenAddCourseModal">
+                <i class="bi bi-book me-1"></i> Register New Course
+            </button>
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="SeedSampleAcademicData">
+                <i class="bi bi-magic me-1"></i> Sample Dataset
+            </button>
+        </div>
+    </div>
+
+    <!-- Macro Stats Banner -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-primary p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Registered Courses</small>
+                <div class="fs-4 fw-bold text-primary mt-1">@courses.Count Courses</div>
+                <small class="text-muted">@courses.Sum(c => c.CreditHours) Total Credit Hours</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-success p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Slide Coverage</small>
+                <div class="fs-4 fw-bold text-success mt-1">@courses.Sum(c => c.CoveredSlides) / @courses.Sum(c => c.TotalSlides)</div>
+                <small class="text-muted">@OverallSlideProgress.ToString("F0")% of syllabus covered</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-warning p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Revision Topics</small>
+                <div class="fs-4 fw-bold text-warning mt-1">@allTasks.Count(t => !t.IsCompleted) Pending</div>
+                <small class="text-muted">@allTasks.Count(t => t.IsCompleted) Mastered</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-info p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Study Commitment</small>
+                <div class="fs-4 fw-bold text-info mt-1">@allTasks.Where(t => !t.IsCompleted).Sum(t => t.EstimatedHours) hrs</div>
+                <small class="text-muted">Estimated revision time needed</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 1: Course Cards Grid -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0">Registered Semester Courses (@courses.Count)</h5>
+    </div>
+
+    <div class="row g-3 mb-5">
+        @if (courses.Count == 0)
+        {
+            <div class="col-12">
+                <div class="card p-4 text-center border-0 shadow-sm bg-white">
+                    <p class="text-muted mb-0">No courses added yet. Click "+ Register New Course" to begin!</p>
+                </div>
+            </div>
+        }
+        @foreach (var c in courses)
+        {
+            <div class="col-md-6 col-xl-4">
+                <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100 position-relative">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="badge bg-dark px-2 py-1 me-1">@c.Code</span>
+                            <span class="badge bg-light text-muted border">@c.CreditHours Credits</span>
+                            <h6 class="fw-bold text-dark mt-2 mb-0">@c.Title</h6>
+                        </div>
+                        <span class="badge @(c.IsFullyCovered ? "bg-success" : "bg-primary")">
+                            @(c.IsFullyCovered ? "Syllabus Done 🎉" : $"{c.SlideProgress:F0}%")
+                        </span>
+                    </div>
+
+                    <div class="d-flex justify-content-between small text-muted my-2">
+                        <span>Deck Progress:</span>
+                        <span class="fw-bold text-dark">@c.CoveredSlides / @c.TotalSlides Slides</span>
+                    </div>
+
+                    <div class="progress rounded-pill mb-3" style="height: 10px;">
+                        <div class="progress-bar rounded-pill @(c.IsFullyCovered ? "bg-success" : "bg-primary")"
+                             style="width: @(Math.Min(100, c.SlideProgress))%"></div>
+                    </div>
+
+                    <!-- Slide Controls -->
+                    <div class="d-flex gap-1 align-items-center mb-2">
+                        <button class="btn btn-sm btn-outline-success flex-fill" 
+                                disabled="@c.IsFullyCovered" 
+                                @onclick="() => IncrementSlides(c, 1)">
+                            +1 Slide
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary flex-fill" 
+                                disabled="@c.IsFullyCovered" 
+                                @onclick="() => IncrementSlides(c, 5)">
+                            +5 Slides
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                disabled="@(c.CoveredSlides == 0)" 
+                                @onclick="() => IncrementSlides(c, -1)">
+                            -1
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-2">
+                        <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none" @onclick="() => OpenEditCourseModal(c)">Edit</button>
+                        <button class="btn btn-sm btn-link text-danger p-0 text-decoration-none" @onclick="() => DeleteCourse(c.Id)">Remove</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Section 2: Revision Topics / Milestones -->
+    <div class="row g-4">
+        <!-- Form: Add or Edit Task -->
+        <div class="col-lg-4">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white">
+                <h5 class="fw-bold mb-3">@(isEditingTask ? "Edit Study Topic" : "Add Revision Topic")</h5>
+
+                <EditForm Model="currentTask" OnValidSubmit="SaveTask">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger small" />
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Select Course:</label>
+                            @if (courses.Any())
+                            {
+                                <InputSelect class="form-select" @bind-Value="currentTask.CourseCode">
+                                    <option value="">-- Choose --</option>
+                                    @foreach (var crs in courses)
+                                    {
+                                        <option value="@crs.Code">@crs.Code</option>
+                                    }
+                                </InputSelect>
+                            }
+                            else
+                            {
+                                <InputText class="form-control" @bind-Value="currentTask.CourseCode" placeholder="e.g. CPEN302" />
+                            }
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Priority:</label>
+                            <InputSelect class="form-select" @bind-Value="currentTask.Priority">
+                                <option value="High">High</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Topic / Slide Unit:</label>
+                        <InputText class="form-control" @bind-Value="currentTask.TopicTitle" placeholder="e.g. Slide 4: SignalR & WebAssembly" />
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Est. Hours:</label>
+                            <InputNumber class="form-control" @bind-Value="currentTask.EstimatedHours" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Exam Date:</label>
+                            <InputDate class="form-control" @bind-Value="currentTask.ExamDate" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm py-2">
+                        @(isEditingTask ? "Update Topic" : "Add to Revision Plan")
+                    </button>
+                    @if (isEditingTask)
+                    {
+                        <button type="button" class="btn btn-secondary w-100 mt-2" @onclick="CancelEditTask">Cancel</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Task List Table -->
+        <div class="col-lg-8">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-2 mb-md-0">Revision Checklist (@filteredTasks.Count)</h6>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search topic or course..."
+                               @bind="searchTerm" @bind:event="oninput" @bind:after="ApplyFilter" />
+                        <select class="form-select form-select-sm" @bind="statusFilter" @bind:after="ApplyFilter">
+                            <option value="All">All Topics</option>
+                            <option value="Pending">Pending Only</option>
+                            <option value="Completed">Mastered Only</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ResetFilter">Reset</button>
+                    </div>
+                </div>
+
+                @if (filteredTasks.Count == 0)
+                {
+                    <div class="text-center py-5 text-muted">
+                        <p class="mb-0">No revision topics match your filter.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small text-uppercase">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Course</th>
+                                    <th>Topic Title</th>
+                                    <th>Target Date</th>
+                                    <th>Est. Hours</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in filteredTasks)
+                                {
+                                    <tr class="@(item.IsCompleted ? "table-light opacity-75" : "")">
+                                        <td>
+                                            <button class="btn btn-sm @(item.IsCompleted ? "btn-success" : "btn-outline-secondary") rounded-circle py-1 px-2"
+                                                    title="@(item.IsCompleted ? "Mark Pending" : "Mark Mastered")"
+                                                    @onclick="() => ToggleComplete(item)">
+                                                <i class="bi @(item.IsCompleted ? "bi-check-lg" : "bi-circle")"></i>
+                                            </button>
+                                        </td>
+                                        <td><span class="badge bg-dark">@item.CourseCode</span></td>
+                                        <td>
+                                            <span class="fw-semibold @(item.IsCompleted ? "text-decoration-line-through text-muted" : "text-dark")">
+                                                @item.TopicTitle
+                                            </span>
+                                            <div class="small">
+                                                <span class="badge rounded-pill @GetPriorityBadge(item.Priority)">@item.Priority</span>
+                                            </div>
+                                        </td>
+                                        <td class="small text-muted">@item.ExamDate.ToString("dd MMM yyyy")</td>
+                                        <td class="small text-dark fw-bold">@item.EstimatedHours hrs</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" @onclick="() => StartEditTask(item)">Edit</button>
+                                            <button class="btn btn-sm btn-outline-danger py-0 px-2" @onclick="() => DeleteTask(item.Id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add or Edit Course -->
+@if (showCourseModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">@(editingCourseId.HasValue ? "Edit Course Deck" : "Register Semester Course")</h5>
+                    <button type="button" class="btn-close" @onclick="() => showCourseModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Course Code:</label>
+                            <input type="text" class="form-control" @bind="courseModel.Code" placeholder="e.g. CPEN302" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Credit Hours:</label>
+                            <input type="number" class="form-control" @bind="courseModel.CreditHours" min="1" max="6" />
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Course Title:</label>
+                        <input type="text" class="form-control" @bind="courseModel.Title" placeholder="e.g. Visual Programming using C#" />
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Total Slides Given:</label>
+                            <input type="number" class="form-control" @bind="courseModel.TotalSlides" min="1" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Slides Covered So Far:</label>
+                            <input type="number" class="form-control" @bind="courseModel.CoveredSlides" min="0" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showCourseModal = false">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveCourse">Save Course</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SemesterCourse> courses = new();
+    private List<StudyTask> allTasks = new();
+    private List<StudyTask> filteredTasks = new();
+
+    private SemesterCourse courseModel = new();
+    private int? editingCourseId = null;
+    private bool showCourseModal = false;
+
+    private StudyTask currentTask = new() { ExamDate = DateTime.Today.AddDays(7) };
+    private bool isEditingTask = false;
+    private string searchTerm = "";
+    private string statusFilter = "All";
+
+    private double OverallSlideProgress =>
+        courses.Sum(c => c.TotalSlides) > 0
+            ? ((double)courses.Sum(c => c.CoveredSlides) / courses.Sum(c => c.TotalSlides)) * 100
+            : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAcademicDataAsync();
+    }
+
+    private async Task LoadAcademicDataAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        courses = await db.SemesterCourses.OrderBy(c => c.Code).ToListAsync();
+        allTasks = await db.StudyTasks.OrderBy(t => t.IsCompleted).ThenBy(t => t.ExamDate).ToListAsync();
+        ApplyFilter();
+    }
+
+    // Course Operations
+    private void OpenAddCourseModal()
+    {
+        editingCourseId = null;
+        courseModel = new SemesterCourse();
+        showCourseModal = true;
+    }
+
+    private void OpenEditCourseModal(SemesterCourse c)
+    {
+        editingCourseId = c.Id;
+        courseModel = new SemesterCourse
+        {
+            Id = c.Id,
+            Code = c.Code,
+            Title = c.Title,
+            CreditHours = c.CreditHours,
+            TotalSlides = c.TotalSlides,
+            CoveredSlides = c.CoveredSlides
+        };
+        showCourseModal = true;
+    }
+
+    private async Task SaveCourse()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (editingCourseId.HasValue)
+        {
+            var match = await db.SemesterCourses.FindAsync(editingCourseId.Value);
+            if (match != null)
+            {
+                match.Code = courseModel.Code;
+                match.Title = courseModel.Title;
+                match.CreditHours = courseModel.CreditHours;
+                match.TotalSlides = courseModel.TotalSlides;
+                match.CoveredSlides = Math.Min(courseModel.CoveredSlides, courseModel.TotalSlides);
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            courseModel.CoveredSlides = Math.Min(courseModel.CoveredSlides, courseModel.TotalSlides);
+            db.SemesterCourses.Add(courseModel);
+            await db.SaveChangesAsync();
+        }
+
+        showCourseModal = false;
+        await LoadAcademicDataAsync();
+    }
+
+    private async Task IncrementSlides(SemesterCourse c, int delta)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SemesterCourses.FindAsync(c.Id);
+        if (match != null)
+        {
+            match.CoveredSlides = Math.Clamp(match.CoveredSlides + delta, 0, match.TotalSlides);
+            await db.SaveChangesAsync();
+        }
+        await LoadAcademicDataAsync();
+    }
+
+    private async Task DeleteCourse(int id)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SemesterCourses.FindAsync(id);
+        if (match != null)
+        {
+            db.SemesterCourses.Remove(match);
+            await db.SaveChangesAsync();
+        }
+        await LoadAcademicDataAsync();
+    }
+
+    // Task Operations
+    private async Task SaveTask()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (isEditingTask)
+        {
+            var match = await db.StudyTasks.FindAsync(currentTask.Id);
+            if (match != null)
+            {
+                match.CourseCode = currentTask.CourseCode;
+                match.TopicTitle = currentTask.TopicTitle;
+                match.EstimatedHours = currentTask.EstimatedHours;
+                match.Priority = currentTask.Priority;
+                match.ExamDate = currentTask.ExamDate;
+                await db.SaveChangesAsync();
+            }
+            isEditingTask = false;
+        }
+        else
+        {
+            db.StudyTasks.Add(new StudyTask
+            {
+                CourseCode = currentTask.CourseCode,
+                TopicTitle = currentTask.TopicTitle,
+                EstimatedHours = currentTask.EstimatedHours,
+                Priority = currentTask.Priority,
+                ExamDate = currentTask.ExamDate
+            });
+            await db.SaveChangesAsync();
+        }
+
+        currentTask = new StudyTask { ExamDate = DateTime.Today.AddDays(7) };
+        await LoadAcademicDataAsync();
+    }
+
+    private void StartEditTask(StudyTask item)
+    {
+        isEditingTask = true;
+        currentTask = new StudyTask
+        {
+            Id = item.Id,
+            CourseCode = item.CourseCode,
+            TopicTitle = item.TopicTitle,
+            EstimatedHours = item.EstimatedHours,
+            Priority = item.Priority,
+            ExamDate = item.ExamDate
+        };
+    }
+
+    private void CancelEditTask()
+    {
+        isEditingTask = false;
+        currentTask = new StudyTask { ExamDate = DateTime.Today.AddDays(7) };
+    }
+
+    private async Task ToggleComplete(StudyTask item)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.StudyTasks.FindAsync(item.Id);
+        if (match != null)
+        {
+            match.IsCompleted = !match.IsCompleted;
+            match.CompletedAt = match.IsCompleted ? DateTime.Now : null;
+            await db.SaveChangesAsync();
+        }
+        await LoadAcademicDataAsync();
+    }
+
+    private async Task DeleteTask(int id)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.StudyTasks.FindAsync(id);
+        if (match != null)
+        {
+            db.StudyTasks.Remove(match);
+            await db.SaveChangesAsync();
+        }
+        await LoadAcademicDataAsync();
+    }
+
+    private void ApplyFilter()
+    {
+        IEnumerable<StudyTask> query = allTasks;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            query = query.Where(t => t.CourseCode.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                     t.TopicTitle.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        if (statusFilter == "Pending") query = query.Where(t => !t.IsCompleted);
+        else if (statusFilter == "Completed") query = query.Where(t => t.IsCompleted);
+
+        filteredTasks = query.ToList();
+    }
+
+    private void ResetFilter()
+    {
+        searchTerm = "";
+        statusFilter = "All";
+        ApplyFilter();
+    }
+
+    private async Task SeedSampleAcademicData()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (!db.SemesterCourses.Any())
+        {
+            db.SemesterCourses.AddRange(
+                new SemesterCourse { Code = "CPEN302", Title = "Visual Programming with C#", CreditHours = 3, TotalSlides = 51, CoveredSlides = 28 },
+                new SemesterCourse { Code = "CPEN304", Title = "Embedded Systems Design", CreditHours = 3, TotalSlides = 35, CoveredSlides = 15 },
+                new SemesterCourse { Code = "ENCE324", Title = "Internet of Things Systems", CreditHours = 3, TotalSlides = 40, CoveredSlides = 40 }
+            );
+            await db.SaveChangesAsync();
+            await LoadAcademicDataAsync();
+        }
+    }
+
+    private string GetPriorityBadge(string priority) => priority switch
+    {
+        "High" => "bg-danger text-white",
+        "Medium" => "bg-warning text-dark",
+        _ => "bg-secondary text-white"
+    };
+}

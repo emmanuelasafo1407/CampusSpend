@@ -1,0 +1,240 @@
+﻿@page "/"
+@page "/dashboard"
+@rendermode InteractiveServer
+@using CampusSpend.Models
+@using CampusSpend.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Dashboard — CampusSpend</PageTitle>
+
+<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Financial Overview</h2>
+            <small class="text-muted">Welcome back! Here is your current academic financial health.</small>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <button class="btn btn-primary btn-sm shadow-sm" @onclick='() => Nav.NavigateTo("transactions")'>
+                <i class="bi bi-plus-lg me-1"></i> Log Expense
+            </button>
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="() => showBudgetModal = true">
+                <i class="bi bi-sliders me-1"></i> Set Budget
+            </button>
+        </div>
+    </div>
+
+    <!-- Budget Status Banner -->
+    <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <span class="badge bg-primary me-2 px-3 py-1">@activeBudget.PeriodType Limit</span>
+                <span class="fw-bold fs-6">GHS @CurrentPeriodSpent.ToString("N2") spent of GHS @activeBudget.TargetAmount.ToString("N2") cap</span>
+            </div>
+            <span class="fw-bold @(BudgetUsagePercent >= 90 ? "text-danger" : BudgetUsagePercent >= 70 ? "text-warning" : "text-success")">
+                @BudgetUsagePercent.ToString("F1")% Used
+            </span>
+        </div>
+        <div class="progress rounded-pill" style="height: 12px;">
+            <div class="progress-bar rounded-pill @(BudgetUsagePercent >= 90 ? "bg-danger" : BudgetUsagePercent >= 70 ? "bg-warning" : "bg-success")"
+                 style="width: @(Math.Min(BudgetUsagePercent, 100))%"></div>
+        </div>
+    </div>
+
+    <!-- 4 Primary KPI Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-primary p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">All-Time Expenditure</small>
+                <div class="fs-4 fw-bold text-primary mt-1">GHS @TotalSpent.ToString("N2")</div>
+                <small class="text-muted">@allExpenses.Count Total entries</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-success p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Food & Living</small>
+                <div class="fs-4 fw-bold text-success mt-1">GHS @CategorySpent("Food").ToString("N2")</div>
+                <small class="text-muted">@(TotalSpent > 0 ? (CategorySpent("Food") / TotalSpent * 100).ToString("F0") : "0")% of student spending</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 border-warning p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Academics & Printing</small>
+                <div class="fs-4 fw-bold text-warning mt-1">GHS @CategorySpent("Academics").ToString("N2")</div>
+                <small class="text-muted">Handouts & lab supplies</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card shadow-sm border-0 border-start border-4 @(IsSpendingTrendingUp ? "border-danger" : "border-info") p-3 bg-white">
+                <small class="text-muted text-uppercase fw-semibold">Velocity Outlook</small>
+                <div class="fs-5 fw-bold @(IsSpendingTrendingUp ? "text-danger" : "text-success") mt-1">
+                    @(IsSpendingTrendingUp ? "↑ Surge (High Outflow)" : "↓ Stable (Controlled)")
+                </div>
+                <small class="text-muted">@(IsSpendingTrendingUp ? "Exceeding normal pacing" : "Healthy weekly burn rate")</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Preview Grid -->
+    <div class="row g-4">
+        <!-- Recent Transactions Preview -->
+        <div class="col-lg-7">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Recent Transactions</h6>
+                    <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("transactions")'>
+                        View All Ledger →
+                    </button>
+                </div>
+                @if (allExpenses.Count == 0)
+                {
+                    <p class="text-muted small py-4 text-center">No transactions logged yet.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <tbody>
+                                @foreach (var item in allExpenses.Take(5))
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-semibold text-dark d-block">@item.Description</span>
+                                            <small class="text-muted">@item.DateIncurred.ToString("dd MMM") · @item.PaymentMethod</small>
+                                        </td>
+                                        <td><span class="badge bg-light text-dark border">@item.Category</span></td>
+                                        <td class="text-end fw-bold text-dark">GHS @item.Amount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Active Goals Preview -->
+        <div class="col-lg-5">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">Active Savings Targets</h6>
+                    <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("goals")'>
+                        Manage Goals →
+                    </button>
+                </div>
+                @if (activeGoals.Count == 0)
+                {
+                    <p class="text-muted small py-4 text-center">No active savings targets set.</p>
+                }
+                else
+                {
+                    @foreach (var g in activeGoals.Take(3))
+                    {
+                        var pct = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
+                        <div class="mb-3 p-2 border rounded-3 bg-light">
+                            <div class="d-flex justify-content-between small fw-semibold mb-1">
+                                <span>@g.Title</span>
+                                <span>GHS @g.CurrentSaved.ToString("N2") / @g.TargetAmount.ToString("N2")</span>
+                            </div>
+                            <div class="progress rounded-pill" style="height: 8px;">
+                                <div class="progress-bar rounded-pill bg-success" style="width: @(Math.Min(100, pct))%"></div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Configure Budget -->
+@if (showBudgetModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Set Spending Budget</h5>
+                    <button type="button" class="btn-close" @onclick="() => showBudgetModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Period Horizon:</label>
+                        <select class="form-select" @bind="activeBudget.PeriodType">
+                            <option value="Daily">Daily</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Spending Cap (GHS):</label>
+                        <input type="number" class="form-control" @bind="activeBudget.TargetAmount" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showBudgetModal = false">Cancel</button>
+                    <button class="btn btn-primary" @onclick="SaveBudget">Update Budget</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Expense> allExpenses = new();
+    private List<SavingsGoal> activeGoals = new();
+    private BudgetSetting activeBudget = new();
+    private bool showBudgetModal = false;
+
+    private decimal TotalSpent => allExpenses.Sum(e => e.Amount);
+    private decimal CategorySpent(string cat) => allExpenses.Where(e => e.Category == cat).Sum(e => e.Amount);
+
+    private decimal CurrentPeriodSpent
+    {
+        get
+        {
+            var now = DateTime.Today;
+            return activeBudget.PeriodType switch
+            {
+                "Daily" => allExpenses.Where(e => e.DateIncurred.Date == now).Sum(e => e.Amount),
+                "Weekly" => allExpenses.Where(e => e.DateIncurred >= now.AddDays(-7)).Sum(e => e.Amount),
+                "Yearly" => allExpenses.Where(e => e.DateIncurred.Year == now.Year).Sum(e => e.Amount),
+                _ => allExpenses.Where(e => e.DateIncurred.Month == now.Month && e.DateIncurred.Year == now.Year).Sum(e => e.Amount)
+            };
+        }
+    }
+
+    private decimal BudgetUsagePercent => activeBudget.TargetAmount > 0 
+        ? (CurrentPeriodSpent / activeBudget.TargetAmount) * 100 
+        : 0;
+
+    private bool IsSpendingTrendingUp
+    {
+        get
+        {
+            var recent3 = allExpenses.Where(e => e.DateIncurred >= DateTime.Today.AddDays(-3)).Sum(e => e.Amount);
+            var previous3 = allExpenses.Where(e => e.DateIncurred < DateTime.Today.AddDays(-3) && e.DateIncurred >= DateTime.Today.AddDays(-6)).Sum(e => e.Amount);
+            return recent3 > previous3 && recent3 > 0;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        allExpenses = await db.Expenses.OrderByDescending(e => e.DateIncurred).ToListAsync();
+        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
+        activeBudget = await db.BudgetSettings.FirstOrDefaultAsync() ?? new BudgetSetting();
+    }
+
+    private async Task SaveBudget()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        activeBudget.UpdatedAt = DateTime.Now;
+        db.BudgetSettings.Update(activeBudget);
+        await db.SaveChangesAsync();
+        showBudgetModal = false;
+    }
+}

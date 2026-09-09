@@ -1,0 +1,262 @@
+@page "/transactions"
+@rendermode InteractiveServer
+@using CampusSpend.Models
+@using CampusSpend.Data
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject IJSRuntime JS
+
+<PageTitle>Transactions — CampusSpend</PageTitle>
+
+<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Expense Ledger</h2>
+            <small class="text-muted">Record, filter, and audit all expenditures.</small>
+        </div>
+        <button class="btn btn-outline-success btn-sm shadow-sm" @onclick="ExportToCsv">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Download CSV Export
+        </button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Form -->
+        <div class="col-lg-4">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white">
+                <h5 class="fw-bold mb-3">@(isEditing ? "Edit Transaction" : "Record New Expense")</h5>
+                <EditForm Model="currentExpense" OnValidSubmit="SaveExpense">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="text-danger small" />
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Description / Merchant:</label>
+                        <InputText class="form-control" @bind-Value="currentExpense.Description" placeholder="e.g. Waakye & Egg" />
+                        <ValidationMessage For="@(() => currentExpense.Description)" class="text-danger small" />
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Amount (GHS):</label>
+                            <InputNumber class="form-control" @bind-Value="currentExpense.Amount" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Date:</label>
+                            <InputDate class="form-control" @bind-Value="currentExpense.DateIncurred" />
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Category:</label>
+                            <InputSelect class="form-select" @bind-Value="currentExpense.Category">
+                                <option value="Food">Food</option>
+                                <option value="Academics">Academics</option>
+                                <option value="Transport">Transport</option>
+                                <option value="Data/Airtime">Data/Airtime</option>
+                                <option value="Utilities">Utilities</option>
+                                <option value="Lifestyle">Lifestyle</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Payment Method:</label>
+                            <InputSelect class="form-select" @bind-Value="currentExpense.PaymentMethod">
+                                <option value="Mobile Money">Mobile Money</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Card">Bank Card</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 shadow-sm py-2">
+                        @(isEditing ? "Update Expense" : "Save Record")
+                    </button>
+                    @if (isEditing)
+                    {
+                        <button type="button" class="btn btn-secondary w-100 mt-2" @onclick="CancelEdit">Cancel</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div class="col-lg-8">
+            <div class="card stat-card shadow-sm border-0 p-3 bg-white">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-2 mb-md-0">Logged Entries (@filteredExpenses.Count)</h6>
+                    <div class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search item..."
+                               @bind="searchTerm" @bind:event="oninput" @bind:after="ApplyFilter" />
+                        <select class="form-select form-select-sm" @bind="selectedCategory" @bind:after="ApplyFilter">
+                            <option value="">All Categories</option>
+                            <option value="Food">Food</option>
+                            <option value="Academics">Academics</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Data/Airtime">Data/Airtime</option>
+                            <option value="Utilities">Utilities</option>
+                            <option value="Lifestyle">Lifestyle</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="ResetFilter">Reset</button>
+                    </div>
+                </div>
+
+                @if (filteredExpenses.Count == 0)
+                {
+                    <div class="text-center py-5 text-muted">
+                        <p class="mb-0">No records found matching criteria.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small text-uppercase">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Mode</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in filteredExpenses)
+                                {
+                                    <tr>
+                                        <td class="small text-muted">@item.DateIncurred.ToString("dd MMM yyyy")</td>
+                                        <td><strong>@item.Description</strong></td>
+                                        <td><span class="badge bg-secondary">@item.Category</span></td>
+                                        <td class="small text-muted">@item.PaymentMethod</td>
+                                        <td class="text-end fw-bold text-dark">GHS @item.Amount.ToString("N2")</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary py-0 px-2 me-1" @onclick="() => StartEdit(item)">Edit</button>
+                                            <button class="btn btn-sm btn-outline-danger py-0 px-2" @onclick="() => DeleteExpense(item.Id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Expense> allExpenses = new();
+    private List<Expense> filteredExpenses = new();
+    private Expense currentExpense = new() { DateIncurred = DateTime.Today };
+    private bool isEditing = false;
+    private string searchTerm = "";
+    private string selectedCategory = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpensesAsync();
+    }
+
+    private async Task LoadExpensesAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        allExpenses = await db.Expenses.OrderByDescending(e => e.DateIncurred).ToListAsync();
+        ApplyFilter();
+    }
+
+    private async Task SaveExpense()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (isEditing)
+        {
+            var match = await db.Expenses.FindAsync(currentExpense.Id);
+            if (match != null)
+            {
+                match.Description = currentExpense.Description;
+                match.Amount = currentExpense.Amount;
+                match.Category = currentExpense.Category;
+                match.PaymentMethod = currentExpense.PaymentMethod;
+                match.DateIncurred = currentExpense.DateIncurred;
+                await db.SaveChangesAsync();
+            }
+            isEditing = false;
+        }
+        else
+        {
+            db.Expenses.Add(new Expense
+            {
+                Description = currentExpense.Description,
+                Amount = currentExpense.Amount,
+                Category = currentExpense.Category,
+                PaymentMethod = currentExpense.PaymentMethod,
+                DateIncurred = currentExpense.DateIncurred
+            });
+            await db.SaveChangesAsync();
+        }
+
+        currentExpense = new Expense { DateIncurred = DateTime.Today };
+        await LoadExpensesAsync();
+    }
+
+    private void StartEdit(Expense item)
+    {
+        isEditing = true;
+        currentExpense = new Expense
+        {
+            Id = item.Id,
+            Description = item.Description,
+            Amount = item.Amount,
+            Category = item.Category,
+            PaymentMethod = item.PaymentMethod,
+            DateIncurred = item.DateIncurred
+        };
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        currentExpense = new Expense { DateIncurred = DateTime.Today };
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.Expenses.FindAsync(id);
+        if (match != null)
+        {
+            db.Expenses.Remove(match);
+            await db.SaveChangesAsync();
+        }
+        await LoadExpensesAsync();
+    }
+
+    private void ApplyFilter()
+    {
+        IEnumerable<Expense> query = allExpenses;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            query = query.Where(e => e.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(selectedCategory))
+            query = query.Where(e => e.Category == selectedCategory);
+
+        filteredExpenses = query.ToList();
+    }
+
+    private void ResetFilter()
+    {
+        searchTerm = "";
+        selectedCategory = "";
+        ApplyFilter();
+    }
+
+    private async Task ExportToCsv()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Id,Date,Description,Category,PaymentMethod,Amount");
+        foreach (var e in allExpenses)
+        {
+            sb.AppendLine($"{e.Id},{e.DateIncurred:yyyy-MM-dd},\"{e.Description}\",{e.Category},{e.PaymentMethod},{e.Amount}");
+        }
+        await JS.InvokeVoidAsync("downloadCsvFile", $"CampusSpend_{DateTime.Now:yyyyMMdd}.csv", sb.ToString());
+    }
+}

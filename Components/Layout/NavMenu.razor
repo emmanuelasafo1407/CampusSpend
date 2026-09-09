@@ -1,0 +1,40 @@
+﻿<div class="top-row ps-3 navbar navbar-dark bg-dark border-bottom border-secondary">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold text-white tracking-wide d-flex align-items-center" href="">
+            <i class="bi bi-wallet2 text-primary fs-4 me-2"></i>
+            <span>Campus<span class="text-primary">Spend</span></span>
+        </a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column p-3 gap-1">
+        <div class="nav-item">
+            <NavLink class="nav-link rounded-3 px-3 py-2 text-white-50" href="" Match="NavLinkMatch.All">
+                <i class="bi bi-speedometer2 me-3 fs-5"></i> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link rounded-3 px-3 py-2 text-white-50" href="transactions">
+                <i class="bi bi-receipt-cutoff me-3 fs-5"></i> Transactions
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link rounded-3 px-3 py-2 text-white-50" href="goals">
+                <i class="bi bi-piggy-bank-fill me-3 fs-5"></i> Savings & Goals
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link rounded-3 px-3 py-2 text-white-50" href="trends">
+                <i class="bi bi-graph-up-arrow me-3 fs-5"></i> Spending Trends
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link rounded-3 px-3 py-2 text-white-50" href="study">
+                <i class="bi bi-mortarboard-fill me-3 fs-5"></i> StudySprint
+            </NavLink>
+        </div>
+    </nav>
+</div>
