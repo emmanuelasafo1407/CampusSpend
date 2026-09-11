@@ -14,4 +14,5 @@ public class AppDbContext : DbContext
     public DbSet<SemesterCourse> SemesterCourses => Set<SemesterCourse>();
     public DbSet<StudyScheduleSlot> StudyScheduleSlots => Set<StudyScheduleSlot>();
     public DbSet<UserFreeWindow> UserFreeWindows => Set<UserFreeWindow>();
+    public DbSet<ProjectDailyLog> ProjectDailyLogs => Set<ProjectDailyLog>();
 }

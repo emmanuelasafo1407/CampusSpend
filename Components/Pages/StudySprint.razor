@@ -16,11 +16,11 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-3">
         <div>
             <h2 class="fw-bold text-dark mb-0">StudySprint Academic Command</h2>
-            <small class="text-muted">Class-aligned timetable generation, automatic 10-minute reminders & single-focus deck pacing.</small>
+            <small class="text-muted">Monday–Sunday structured study routine, break intervals, syllabus mastery & focus reminders.</small>
         </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
+        <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
             <button class="btn btn-outline-primary btn-sm shadow-sm" @onclick="() => showFreeHoursModal = true">
-                <i class="bi bi-clock-history me-1"></i> Configure Free Study Hours
+                <i class="bi bi-clock-history me-1"></i> Configure Daily Free Hours
             </button>
             <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenAddCourseModal">
                 <i class="bi bi-plus-circle me-1"></i> Register Course
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <!-- Active Single-Course Focus Timer Banner with Auto-Reminder Display -->
+    <!-- Active Single-Course Focus Timer Banner -->
     <div class="card stat-card shadow-sm border-0 mb-4 p-3 bg-white">
         <div class="row align-items-center">
             <div class="col-md-5 d-flex align-items-center gap-3">
@@ -54,7 +54,7 @@
                     <small class="text-muted">
                         @if (ActiveCourseSession != null)
                         {
-                            <span>Active: <strong>@ActiveCourseSession.Code</strong> (Slide @ActiveCourseSession.ActiveSlideUnderway)</span>
+                            <span>Active: <strong>@ActiveCourseSession.Title</strong> (@ActiveCourseSession.Code — Slide @ActiveCourseSession.ActiveSlideUnderway)</span>
                         }
                         else
                         {
@@ -87,7 +87,7 @@
                 }
                 else
                 {
-                    <span class="text-muted small">Select "+ Start Slide" on any registered course to begin.</span>
+                    <span class="text-muted small">Select "+ Start Slide" on any course to begin your study block.</span>
                 }
             </div>
         </div>
@@ -128,18 +128,30 @@
         </div>
     </div>
 
-    <!-- Smart Generated Study Timetable (Aligned to Class Timetable & Free Time) -->
+    <!-- Monday to Sunday Routine Timetable -->
     <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white">
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
             <div>
-                <h5 class="fw-bold text-dark mb-0">Class-Aligned Revision Timetable</h5>
-                <small class="text-muted">Schedules revision right around your class days during your configured free hours.</small>
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="fw-bold text-dark mb-0">Weekly Revision & Study Timetable (Mon – Sun)</h5>
+                    <span class="badge @(isExamRevisionMode ? "bg-danger" : "bg-primary")">
+                        @(isExamRevisionMode ? "Exam Revision Mode" : "Semester Routine Mode")
+                    </span>
+                </div>
+                <small class="text-muted">
+                    @(isExamRevisionMode 
+                        ? "Prioritizes upcoming exam dates, course difficulty and lowest grasp topics with study sessions and breaks." 
+                        : "Schedules sessions across Monday to Sunday directly aligned with class lecture days (previews, reviews, and recovery breaks).")
+                </small>
             </div>
-            <div class="d-flex gap-2 mt-2 mt-md-0">
-                <button class="btn btn-outline-primary btn-sm shadow-sm" @onclick="GenerateSmartSchedule">
-                    <i class="bi bi-cpu me-1"></i> Auto-Generate Aligned Schedule
+            <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
+                <button class="btn btn-outline-primary btn-sm shadow-sm" @onclick="GenerateSemesterSchedule">
+                    <i class="bi bi-calendar-week me-1"></i> Generate Weekly Routine
                 </button>
-                <button class="btn btn-outline-danger btn-sm shadow-sm" @onclick="ClearSchedule">
+                <button class="btn btn-danger btn-sm shadow-sm" @onclick="() => showExamDatesModal = true">
+                    <i class="bi bi-fire me-1"></i> Exam Revision Mode
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="ClearSchedule">
                     Clear
                 </button>
             </div>
@@ -148,53 +160,100 @@
         @if (scheduleSlots.Count == 0)
         {
             <div class="p-4 text-center border rounded bg-light text-muted small">
-                No timetable generated yet. Click <strong>"Auto-Generate Aligned Schedule"</strong> to generate study sessions synchronized with your class schedule and free study windows.
+                No timetable generated yet. Click <strong>"Generate Weekly Routine"</strong> to automatically map Monday to Sunday study blocks with rest breaks based on your class timetable.
             </div>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
-                    <thead class="table-light small text-uppercase">
-                        <tr>
-                            <th>Study Day</th>
-                            <th>Free Window</th>
-                            <th>Course</th>
-                            <th>Class Lecture Day</th>
-                            <th>Pedagogical Goal & Reason</th>
-                            <th>Planned Task</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var slot in scheduleSlots)
-                        {
-                            var crs = courses.FirstOrDefault(c => c.Code == slot.CourseCode);
-                            <tr class="@(slot.IsCompleted ? "table-light opacity-75" : "")">
-                                <td><strong>@slot.DayOfWeek</strong></td>
-                                <td class="small text-muted">@slot.TimeSlot</td>
-                                <td><span class="badge bg-dark">@slot.CourseCode</span></td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">
-                                        <i class="bi bi-calendar3 me-1"></i>Class on @(crs?.ClassDay ?? "N/A")
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge @(slot.Reason.Contains("Post") ? "bg-info text-dark" : "bg-primary")">
-                                        @slot.Reason
-                                    </span>
-                                </td>
-                                <td class="small">@slot.PlannedTopic</td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm @(slot.IsCompleted ? "btn-success" : "btn-outline-secondary") rounded-pill py-0 px-3"
-                                            @onclick="() => ToggleScheduleSlot(slot)">
-                                        @(slot.IsCompleted ? "Completed ✓" : "Mark Done")
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <!-- Grouped Monday to Sunday View -->
+            <div class="row g-3">
+                @foreach (var day in WeekDayOrder)
+                {
+                    var daySlots = scheduleSlots.Where(s => s.DayOfWeek == day).ToList();
+                    var freeWindow = freeWindows.FirstOrDefault(w => w.DayOfWeek == day);
+
+                    <div class="col-12">
+                        <div class="card border rounded-3 overflow-hidden shadow-none mb-1">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3">
+                                <div>
+                                    <span class="fw-bold text-dark fs-6 me-2">@day</span>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>Free Window: <strong>@(freeWindow?.IsAvailable == true ? freeWindow.TimeRange : "Rest / Off Day")</strong>
+                                    </small>
+                                </div>
+                                <span class="badge bg-secondary">@daySlots.Count Planned Session(s)</span>
+                            </div>
+                            <div class="card-body p-0">
+                                @if (!daySlots.Any())
+                                {
+                                    <div class="p-3 text-muted small text-center">
+                                        No study sessions assigned for @day. Relax or catch up on backlog!
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive mb-0">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light small text-uppercase" style="font-size: 0.72rem;">
+                                                <tr>
+                                                    <th style="width: 180px;">Time Interval</th>
+                                                    <th>Course Name</th>
+                                                    <th>Mode / Reason</th>
+                                                    <th>Target Milestone</th>
+                                                    <th class="text-center" style="width: 130px;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (int i = 0; i < daySlots.Count; i++)
+                                                {
+                                                    var slot = daySlots[i];
+                                                    var crs = courses.FirstOrDefault(c => c.Code == slot.CourseCode);
+                                                    var courseDisplayName = crs?.Title ?? slot.CourseCode;
+
+                                                    <tr class="@(slot.IsCompleted ? "table-light opacity-75" : "")">
+                                                        <td class="small fw-semibold text-primary">
+                                                            <i class="bi bi-stopwatch me-1"></i>@slot.TimeSlot
+                                                        </td>
+                                                        <td>
+                                                            <div class="fw-bold text-dark">@courseDisplayName</div>
+                                                            <small class="badge bg-dark me-1" style="font-size: 0.7rem;">@slot.CourseCode</small>
+                                                            @if (crs != null)
+                                                            {
+                                                                <small class="text-muted" style="font-size: 0.75rem;">(Class on @crs.ClassDay)</small>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge @GetSlotBadgeClass(slot.Reason)">
+                                                                @slot.Reason
+                                                            </span>
+                                                        </td>
+                                                        <td class="small text-muted">@slot.PlannedTopic</td>
+                                                        <td class="text-center">
+                                                            <button class="btn btn-sm @(slot.IsCompleted ? "btn-success" : "btn-outline-secondary") rounded-pill py-0 px-3"
+                                                                    @onclick="() => ToggleScheduleSlot(slot)">
+                                                                @(slot.IsCompleted ? "Done ✓" : "Mark Done")
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+
+                                                    <!-- Automatic 15-Minute Scheduled Break Between Sessions -->
+                                                    @if (i < daySlots.Count - 1)
+                                                    {
+                                                        <tr class="table-info bg-opacity-25" style="font-size: 0.78rem;">
+                                                            <td colspan="5" class="py-1 px-3 text-info fw-semibold text-center">
+                                                                <i class="bi bi-cup-hot-fill me-1"></i> 15-Minute Recovery Break & Hydration Window
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>
@@ -206,7 +265,7 @@
         {
             <div class="col-12">
                 <div class="p-3 bg-white rounded border text-muted small text-center">
-                    No exam dates scheduled yet.
+                    No exam dates scheduled yet. Click "Exam Revision Mode" above to assign dates and activate pacing.
                 </div>
             </div>
         }
@@ -241,9 +300,9 @@
         }
     </div>
 
-    <!-- Registered Courses Grid -->
+    <!-- Registered Courses Grid with Difficulty & Understanding Badges -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-dark mb-0">Registered Courses & Class Timetable Days (@courses.Count)</h5>
+        <h5 class="fw-bold text-dark mb-0">Registered Semester Courses (@courses.Count)</h5>
     </div>
 
     <div class="row g-3 mb-5">
@@ -258,12 +317,27 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <span class="badge bg-dark px-2 py-1 me-1">@c.Code</span>
+                            <span class="badge @(c.Difficulty == "Hard" ? "bg-danger" : c.Difficulty == "Medium" ? "bg-warning text-dark" : "bg-info text-dark") me-1">
+                                @c.Difficulty
+                            </span>
                             <span class="badge bg-light text-primary border fw-semibold">Class: @c.ClassDay</span>
                             <h6 class="fw-bold text-dark mt-2 mb-0">@c.Title</h6>
                         </div>
                         <span class="badge @(c.IsFullyCovered ? "bg-success" : "bg-primary")">
                             @(c.IsFullyCovered ? "Mastered 🎉" : $"{c.SlideProgress:F0}%")
                         </span>
+                    </div>
+
+                    <!-- Understanding Grasp Bar -->
+                    <div class="small text-muted d-flex justify-content-between mt-2 mb-1">
+                        <span>Grasp / Understanding:</span>
+                        <strong class="@(c.UnderstandingPercentage < 40 ? "text-danger" : c.UnderstandingPercentage < 70 ? "text-warning" : "text-success")">
+                            @c.UnderstandingPercentage%
+                        </strong>
+                    </div>
+                    <div class="progress rounded-pill mb-2" style="height: 6px;">
+                        <div class="progress-bar rounded-pill @(c.UnderstandingPercentage < 40 ? "bg-danger" : c.UnderstandingPercentage < 70 ? "bg-warning" : "bg-success")"
+                             style="width: @c.UnderstandingPercentage%"></div>
                     </div>
 
                     <!-- Target Grade Selector -->
@@ -352,18 +426,75 @@
     </div>
 </div>
 
-<!-- Modal 1: Configure Free Study Hours for Each Day -->
+<!-- Modal: Configure Exam Dates & Trigger Revision Schedule -->
+@if (showExamDatesModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-calendar2-check-fill me-2"></i>Exam Revision Planner</h5>
+                    <button type="button" class="btn-close" @onclick="() => showExamDatesModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">Confirm exam dates for your courses. StudySprint will generate an intensive revision plan from Monday to Sunday, allocating extra sessions and breaks to Hard courses and low-grasp topics.</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Title</th>
+                                    <th>Difficulty</th>
+                                    <th>Understanding</th>
+                                    <th>Remaining Slides</th>
+                                    <th>Exam Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in courses)
+                                {
+                                    <tr>
+                                        <td><strong>@c.Code</strong></td>
+                                        <td class="small">@c.Title</td>
+                                        <td>
+                                            <span class="badge @(c.Difficulty == "Hard" ? "bg-danger" : c.Difficulty == "Medium" ? "bg-warning text-dark" : "bg-info text-dark")">
+                                                @c.Difficulty
+                                            </span>
+                                        </td>
+                                        <td class="small fw-semibold">@c.UnderstandingPercentage%</td>
+                                        <td><span class="badge bg-secondary">@(c.TotalSlides - c.CoveredSlides) left</span></td>
+                                        <td>
+                                            <input type="date" class="form-control form-control-sm" @bind="c.ExamDate" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => showExamDatesModal = false">Cancel</button>
+                    <button class="btn btn-sm btn-danger px-3 shadow-sm" @onclick="GenerateExamRevisionSchedule">
+                        <i class="bi bi-lightning-charge-fill me-1"></i> Generate Revision Schedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal 1: Configure Daily Free Study Hours (Monday - Sunday) -->
 @if (showFreeHoursModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Configure Weekly Free Study Windows</h5>
+                    <h5 class="modal-title fw-bold">Configure Daily Free Study Windows</h5>
                     <button type="button" class="btn-close" @onclick="() => showFreeHoursModal = false"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted mb-3">Define the exact time range you are free to study on each day. The auto-generator will strictly schedule revision inside these windows.</p>
+                    <p class="small text-muted mb-3">Set the exact hours you are free to study from Monday through Sunday. The timetable will split these windows into study sessions separated by 15-minute breaks.</p>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle">
                             <thead class="table-light small">
@@ -379,7 +510,7 @@
                                     <tr>
                                         <td><strong>@w.DayOfWeek</strong></td>
                                         <td>
-                                            <input type="text" class="form-control form-control-sm" @bind="w.TimeRange" placeholder="e.g. 18:00 - 20:00" />
+                                            <input type="text" class="form-control form-control-sm" @bind="w.TimeRange" placeholder="e.g. 18:00 - 21:00" />
                                         </td>
                                         <td class="text-center">
                                             <input type="checkbox" class="form-check-input" @bind="w.IsAvailable" />
@@ -409,14 +540,14 @@
                     <button type="button" class="btn-close" @onclick="() => showDurationModal = false"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted mb-2">Course: <strong>@selectedCourseToStart.Code</strong> (Slide @(selectedCourseToStart.CoveredSlides + 1))</p>
+                    <p class="small text-muted mb-2">Course: <strong>@selectedCourseToStart.Title</strong> (@selectedCourseToStart.Code — Slide @(selectedCourseToStart.CoveredSlides + 1))</p>
                     <label class="form-label small fw-semibold">Target Time (Minutes):</label>
                     <div class="input-group mb-2">
                         <input type="number" class="form-control" @bind="targetSlideMinutes" min="5" max="180" />
                         <span class="input-group-text">mins</span>
                     </div>
                     <small class="text-success d-block mb-3">
-                        <i class="bi bi-info-circle me-1"></i> Automatic reminder alerts will sound every 10 minutes with your remaining time.
+                        <i class="bi bi-info-circle me-1"></i> Reminders alert every 10 minutes with remaining time.
                     </small>
                     <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-secondary flex-fill" @onclick="() => targetSlideMinutes = 15">15m</button>
@@ -433,7 +564,7 @@
     </div>
 }
 
-<!-- Modal 3: Register or Edit Course (With Class Timetable Day) -->
+<!-- Modal 3: Register or Edit Course -->
 @if (showCourseModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
@@ -469,6 +600,24 @@
 
                     <div class="row g-2 mb-2">
                         <div class="col-6">
+                            <label class="form-label small fw-semibold">Perceived Difficulty:</label>
+                            <select class="form-select" @bind="courseModel.Difficulty">
+                                <option value="Hard">🔥 Hard (Needs More Focus)</option>
+                                <option value="Medium">⚡ Medium</option>
+                                <option value="Easy">🌱 Easy</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Understanding (%):</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" @bind="courseModel.UnderstandingPercentage" min="0" max="100" />
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
                             <label class="form-label small fw-semibold">Credit Hours:</label>
                             <input type="number" class="form-control" @bind="courseModel.CreditHours" min="1" max="6" />
                         </div>
@@ -500,7 +649,7 @@
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label small fw-semibold">Exam Date:</label>
+                        <label class="form-label small fw-semibold">Exam Date (Optional):</label>
                         <input type="date" class="form-control" @bind="courseModel.ExamDate" />
                     </div>
                 </div>
@@ -518,10 +667,14 @@
     private List<StudyScheduleSlot> scheduleSlots = new();
     private List<UserFreeWindow> freeWindows = new();
 
+    private readonly string[] WeekDayOrder = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+
     private SemesterCourse courseModel = new();
     private int? editingCourseId = null;
     private bool showCourseModal = false;
     private bool showFreeHoursModal = false;
+    private bool showExamDatesModal = false;
+    private bool isExamRevisionMode = false;
 
     // Single Focus State
     private SemesterCourse? ActiveCourseSession => courses.FirstOrDefault(c => c.ActiveSlideUnderway.HasValue);
@@ -569,15 +722,21 @@
     {
         using var db = await DbFactory.CreateDbContextAsync();
         courses = await db.SemesterCourses.OrderBy(c => c.Code).ToListAsync();
-        scheduleSlots = await db.StudyScheduleSlots.ToListAsync();
+        
+        var rawSlots = await db.StudyScheduleSlots.ToListAsync();
+        // Chronological Monday to Sunday ordering
+        scheduleSlots = rawSlots
+            .OrderBy(s => Array.IndexOf(WeekDayOrder, s.DayOfWeek))
+            .ThenBy(s => s.TimeSlot)
+            .ToList();
+
         freeWindows = await db.UserFreeWindows.ToListAsync();
 
         if (!freeWindows.Any())
         {
-            string[] weekDays = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
-            foreach (var d in weekDays)
+            foreach (var d in WeekDayOrder)
             {
-                var defaultWindow = d is "Saturday" or "Sunday" ? "14:00 - 17:00" : "18:30 - 20:30";
+                var defaultWindow = d is "Saturday" or "Sunday" ? "14:00 - 17:30" : "18:30 - 21:30";
                 freeWindows.Add(new UserFreeWindow { DayOfWeek = d, TimeRange = defaultWindow, IsAvailable = true });
             }
             db.UserFreeWindows.AddRange(freeWindows);
@@ -602,8 +761,37 @@
         await LoadAcademicDataAsync();
     }
 
-    // Pedagogical Timetable Generator: Class Day Alignment + Free Time Matching
-    private async Task GenerateSmartSchedule()
+    // Helper: Parses a user time window like "18:30 - 21:30" into 2 structured study sessions with a 15 min break
+    private (string session1, string session2) SplitWindowIntoSessions(string timeRange)
+    {
+        try
+        {
+            var parts = timeRange.Split('-');
+            if (parts.Length == 2 && 
+                TimeSpan.TryParse(parts[0].Trim(), out var start) && 
+                TimeSpan.TryParse(parts[1].Trim(), out var end))
+            {
+                var totalMinutes = (end - start).TotalMinutes;
+                if (totalMinutes >= 60)
+                {
+                    var studyBlockDuration = Math.Floor((totalMinutes - 15) / 2);
+                    var s1End = start.Add(TimeSpan.FromMinutes(studyBlockDuration));
+                    var s2Start = s1End.Add(TimeSpan.FromMinutes(15)); // 15-min break
+
+                    string s1 = $"{start:hh\\:mm} - {s1End:hh\\:mm}";
+                    string s2 = $"{s2Start:hh\\:mm} - {end:hh\\:mm}";
+                    return (s1, s2);
+                }
+            }
+        }
+        catch { }
+
+        // Fallback default sessions
+        return ("Session 1 (Early Window)", "Session 2 (Late Window)");
+    }
+
+    // MODE 1: Semester Study Schedule (Monday to Sunday Routine Aligned to Lecture Days)
+    private async Task GenerateSemesterSchedule()
     {
         using var db = await DbFactory.CreateDbContextAsync();
         db.StudyScheduleSlots.RemoveRange(db.StudyScheduleSlots);
@@ -613,54 +801,163 @@
         var availableWindows = freeWindows.Where(w => w.IsAvailable).ToList();
         if (!availableWindows.Any()) return;
 
-        string[] dayOrder = { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
-
-        foreach (var course in courses)
+        // For each day from Monday to Sunday, find the most relevant courses
+        foreach (var day in WeekDayOrder)
         {
-            int classDayIndex = Array.IndexOf(dayOrder, course.ClassDay);
-            if (classDayIndex == -1) classDayIndex = 0;
+            var window = availableWindows.FirstOrDefault(w => w.DayOfWeek == day);
+            if (window == null) continue;
 
-            // Strategy 1: Post-lecture review on the same evening of class or the day after
-            int postReviewDayIndex = (classDayIndex + 1) % dayOrder.Length;
-            string postReviewDay = dayOrder[postReviewDayIndex];
-            var postWindow = availableWindows.FirstOrDefault(w => w.DayOfWeek == postReviewDay) 
-                             ?? availableWindows.FirstOrDefault(w => w.DayOfWeek == course.ClassDay);
+            int dayIndex = Array.IndexOf(WeekDayOrder, day);
+            string tomorrow = WeekDayOrder[(dayIndex + 1) % WeekDayOrder.Length];
+            string yesterday = WeekDayOrder[(dayIndex - 1 + WeekDayOrder.Length) % WeekDayOrder.Length];
 
-            if (postWindow != null)
+            // 1. Course with class today (needs post-lecture consolidation)
+            var courseToday = courses.FirstOrDefault(c => c.ClassDay == day);
+
+            // 2. Course with class tomorrow (needs pre-lecture preview)
+            var courseTomorrow = courses.FirstOrDefault(c => c.ClassDay == tomorrow);
+
+            // 3. Fallback: Course with class yesterday (review) or hard courses
+            var courseYesterday = courses.FirstOrDefault(c => c.ClassDay == yesterday)
+                                  ?? courses.OrderByDescending(c => c.Difficulty == "Hard" ? 2 : 1).FirstOrDefault();
+
+            var (session1Time, session2Time) = SplitWindowIntoSessions(window.TimeRange);
+
+            // Allocate Session 1
+            var primaryCourse = courseToday ?? courseTomorrow ?? courses.First();
+            string primaryReason = courseToday != null ? "Post-Lecture Consolidation" : "Pre-Lecture Preview";
+            string primaryTopic = courseToday != null
+                ? $"Consolidate lecture notes & practice problems from {day}'s class"
+                : $"Preview next slide deck ahead of {tomorrow}'s lecture";
+
+            db.StudyScheduleSlots.Add(new StudyScheduleSlot
             {
-                db.StudyScheduleSlots.Add(new StudyScheduleSlot
-                {
-                    DayOfWeek = postWindow.DayOfWeek,
-                    TimeSlot = postWindow.TimeRange,
-                    CourseCode = course.Code,
-                    PlannedTopic = $"Consolidate slides & review lecture notes from {course.ClassDay}'s class",
-                    Reason = "Post-Lecture Consolidation",
-                    IsCompleted = false
-                });
-            }
+                DayOfWeek = day,
+                TimeSlot = session1Time,
+                CourseCode = primaryCourse.Code,
+                PlannedTopic = primaryTopic,
+                Reason = primaryReason,
+                IsCompleted = false
+            });
 
-            // Strategy 2: Pre-lecture preparation the day before class
-            int prePrepDayIndex = (classDayIndex - 1 + dayOrder.Length) % dayOrder.Length;
-            string prePrepDay = dayOrder[prePrepDayIndex];
-            var preWindow = availableWindows.FirstOrDefault(w => w.DayOfWeek == prePrepDay);
+            // Allocate Session 2 (Different course to diversify study routine)
+            var secondaryCourse = (courseTomorrow != null && courseTomorrow.Code != primaryCourse.Code) 
+                ? courseTomorrow 
+                : (courseYesterday != null && courseYesterday.Code != primaryCourse.Code) 
+                    ? courseYesterday 
+                    : courses.FirstOrDefault(c => c.Code != primaryCourse.Code) ?? primaryCourse;
 
-            if (preWindow != null)
+            string secondaryReason = (secondaryCourse.Code == courseTomorrow?.Code) 
+                ? "Pre-Lecture Preview" 
+                : (secondaryCourse.Difficulty == "Hard") 
+                    ? "Deep Concept Reinforcement" 
+                    : "Problem Solving & Review";
+
+            db.StudyScheduleSlots.Add(new StudyScheduleSlot
             {
-                var nextSlide = course.CoveredSlides + 1;
-                db.StudyScheduleSlots.Add(new StudyScheduleSlot
-                {
-                    DayOfWeek = preWindow.DayOfWeek,
-                    TimeSlot = preWindow.TimeRange,
-                    CourseCode = course.Code,
-                    PlannedTopic = $"Preview Slide {nextSlide} ahead of {course.ClassDay}'s lecture",
-                    Reason = "Pre-Lecture Preview",
-                    IsCompleted = false
-                });
-            }
+                DayOfWeek = day,
+                TimeSlot = session2Time,
+                CourseCode = secondaryCourse.Code,
+                PlannedTopic = $"Active recall & exercise review ({secondaryCourse.Title})",
+                Reason = secondaryReason,
+                IsCompleted = false
+            });
         }
 
         await db.SaveChangesAsync();
+        isExamRevisionMode = false;
         await LoadAcademicDataAsync();
+
+        try
+        {
+            await JS.InvokeVoidAsync("playStudyChime");
+            await JS.InvokeVoidAsync("triggerStudyAlert", "Weekly Routine Active!", "Structured Monday to Sunday timetable generated with breaks.");
+        }
+        catch { }
+    }
+
+    // MODE 2: Exam Revision Mode (Prioritizing Closest Exams, Difficulty, and Low Grasp)
+    private async Task GenerateExamRevisionSchedule()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        foreach (var c in courses)
+        {
+            var match = await db.SemesterCourses.FindAsync(c.Id);
+            if (match != null)
+            {
+                match.ExamDate = c.ExamDate;
+            }
+        }
+        await db.SaveChangesAsync();
+
+        db.StudyScheduleSlots.RemoveRange(db.StudyScheduleSlots);
+
+        var availableWindows = freeWindows.Where(w => w.IsAvailable).ToList();
+        if (!availableWindows.Any()) return;
+
+        // Sort by closest exam date first, then highest difficulty ("Hard" first), then lowest understanding %
+        var prioritizedCourses = courses
+            .OrderBy(c => c.ExamDate ?? DateTime.MaxValue)
+            .ThenByDescending(c => c.Difficulty == "Hard" ? 3 : c.Difficulty == "Medium" ? 2 : 1)
+            .ThenBy(c => c.UnderstandingPercentage)
+            .ToList();
+
+        if (!prioritizedCourses.Any()) return;
+
+        int coursePointer = 0;
+        foreach (var day in WeekDayOrder)
+        {
+            var window = availableWindows.FirstOrDefault(w => w.DayOfWeek == day);
+            if (window == null) continue;
+
+            var (session1Time, session2Time) = SplitWindowIntoSessions(window.TimeRange);
+
+            // Primary revision course
+            var c1 = prioritizedCourses[coursePointer % prioritizedCourses.Count];
+            var daysRemaining1 = (c1.ExamDate?.Date - DateTime.Today)?.Days ?? 14;
+            var slidesLeft1 = Math.Max(1, c1.TotalSlides - c1.CoveredSlides);
+            var dailyTarget1 = Math.Max(1, (int)Math.Ceiling((double)slidesLeft1 / Math.Max(1, daysRemaining1)));
+
+            db.StudyScheduleSlots.Add(new StudyScheduleSlot
+            {
+                DayOfWeek = day,
+                TimeSlot = session1Time,
+                CourseCode = c1.Code,
+                PlannedTopic = $"Master {dailyTarget1} slides · Grasp: {c1.UnderstandingPercentage}% (Exam in {daysRemaining1}d)",
+                Reason = $"Urgent Exam Revision ({c1.Difficulty})",
+                IsCompleted = false
+            });
+
+            // Secondary revision course (hardest or next urgent)
+            coursePointer++;
+            var c2 = prioritizedCourses[coursePointer % prioritizedCourses.Count];
+            var daysRemaining2 = (c2.ExamDate?.Date - DateTime.Today)?.Days ?? 14;
+
+            db.StudyScheduleSlots.Add(new StudyScheduleSlot
+            {
+                DayOfWeek = day,
+                TimeSlot = session2Time,
+                CourseCode = c2.Code,
+                PlannedTopic = $"Past questions & key formulas · Grasp: {c2.UnderstandingPercentage}%",
+                Reason = "Exam Practice & Drill",
+                IsCompleted = false
+            });
+
+            coursePointer++;
+        }
+
+        await db.SaveChangesAsync();
+        isExamRevisionMode = true;
+        showExamDatesModal = false;
+        await LoadAcademicDataAsync();
+
+        try
+        {
+            await JS.InvokeVoidAsync("playStudyChime");
+            await JS.InvokeVoidAsync("triggerStudyAlert", "Exam Revision Schedule Generated!", "Structured Monday to Sunday exam sprints generated with recovery breaks.");
+        }
+        catch { }
     }
 
     private async Task ToggleScheduleSlot(StudyScheduleSlot slot)
@@ -688,7 +985,7 @@
     {
         if (ActiveCourseSession != null)
         {
-            alertMessage = $"Focus collision: You are already studying {ActiveCourseSession.Code} (Slide {ActiveCourseSession.ActiveSlideUnderway}). Complete or cancel it first!";
+            alertMessage = $"Focus collision: You are already studying {ActiveCourseSession.Title} (Slide {ActiveCourseSession.ActiveSlideUnderway}). Complete or cancel it first!";
             return;
         }
 
@@ -751,7 +1048,7 @@
                             await JS.InvokeVoidAsync("playStudyChime");
                             await JS.InvokeVoidAsync("triggerStudyAlert",
                                 $"StudySprint Alert: 10 mins passed!",
-                                $"{minutesElapsed} minutes elapsed on {ActiveCourseSession?.Code}. {minutesLeft} minutes remaining.");
+                                $"{minutesElapsed} minutes elapsed on {ActiveCourseSession?.Title}. {minutesLeft} minutes remaining.");
                         }
                         catch { }
                     });
@@ -771,7 +1068,7 @@
                         await JS.InvokeVoidAsync("playStudyChime");
                         await JS.InvokeVoidAsync("triggerStudyAlert", 
                             "Session Concluded! 🎯", 
-                            $"Your scheduled time for {ActiveCourseSession?.Code} has ended. Mark your slide done!");
+                            $"Your scheduled focus time for {ActiveCourseSession?.Title} has ended. Mark your slide done!");
                     }
                     catch { }
                     StateHasChanged();
@@ -834,6 +1131,8 @@
             TotalSlides = c.TotalSlides,
             CoveredSlides = c.CoveredSlides,
             ClassDay = c.ClassDay,
+            Difficulty = c.Difficulty,
+            UnderstandingPercentage = c.UnderstandingPercentage,
             TargetGrade = c.TargetGrade,
             ExamDate = c.ExamDate
         };
@@ -854,6 +1153,8 @@
                 match.TotalSlides = courseModel.TotalSlides;
                 match.CoveredSlides = Math.Min(courseModel.CoveredSlides, courseModel.TotalSlides);
                 match.ClassDay = courseModel.ClassDay;
+                match.Difficulty = courseModel.Difficulty;
+                match.UnderstandingPercentage = Math.Clamp(courseModel.UnderstandingPercentage, 0, 100);
                 match.TargetGrade = courseModel.TargetGrade;
                 match.ExamDate = courseModel.ExamDate;
                 await db.SaveChangesAsync();
@@ -862,6 +1163,7 @@
         else
         {
             courseModel.CoveredSlides = Math.Min(courseModel.CoveredSlides, courseModel.TotalSlides);
+            courseModel.UnderstandingPercentage = Math.Clamp(courseModel.UnderstandingPercentage, 0, 100);
             db.SemesterCourses.Add(courseModel);
             await db.SaveChangesAsync();
         }
@@ -917,14 +1219,22 @@
         if (!db.SemesterCourses.Any())
         {
             db.SemesterCourses.AddRange(
-                new SemesterCourse { Code = "ENGR 111", Title = "Machine Learning", CreditHours = 3, TotalSlides = 40, CoveredSlides = 10, ClassDay = "Monday", TargetGrade = "A", ExamDate = DateTime.Today.AddDays(12) },
-                new SemesterCourse { Code = "ENCE 324", Title = "Visual Programming with C#", CreditHours = 3, TotalSlides = 50, CoveredSlides = 35, ClassDay = "Wednesday", TargetGrade = "A", ExamDate = DateTime.Today.AddDays(5) },
-                new SemesterCourse { Code = "ENCE 112", Title = "Routing and Switching", CreditHours = 3, TotalSlides = 35, CoveredSlides = 15, ClassDay = "Friday", TargetGrade = "B+", ExamDate = DateTime.Today.AddDays(18) }
+                new SemesterCourse { Code = "ENGR 111", Title = "Machine Learning", CreditHours = 3, TotalSlides = 40, CoveredSlides = 10, ClassDay = "Monday", Difficulty = "Hard", UnderstandingPercentage = 35, TargetGrade = "A", ExamDate = DateTime.Today.AddDays(12) },
+                new SemesterCourse { Code = "ENCE 324", Title = "Visual Programming with C#", CreditHours = 3, TotalSlides = 50, CoveredSlides = 35, ClassDay = "Wednesday", Difficulty = "Medium", UnderstandingPercentage = 75, TargetGrade = "A", ExamDate = DateTime.Today.AddDays(5) },
+                new SemesterCourse { Code = "ENCE 112", Title = "Routing and Switching", CreditHours = 3, TotalSlides = 35, CoveredSlides = 15, ClassDay = "Friday", Difficulty = "Easy", UnderstandingPercentage = 80, TargetGrade = "B+", ExamDate = DateTime.Today.AddDays(18) }
             );
             await db.SaveChangesAsync();
             await LoadAcademicDataAsync();
         }
     }
+
+    private string GetSlotBadgeClass(string reason) => reason switch
+    {
+        var r when r.Contains("Urgent") || r.Contains("Hard") => "bg-danger text-white",
+        var r when r.Contains("Post") => "bg-info text-dark",
+        var r when r.Contains("Pre") => "bg-primary text-white",
+        _ => "bg-secondary text-white"
+    };
 
     private string GetGPABadgeClass() => ProjectedGPA switch
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace CampusSpend.Models;
@@ -39,6 +40,15 @@ public class BudgetSetting
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
 
+public class ProjectDailyLog
+{
+    public int Id { get; set; }
+    public int SavingsGoalId { get; set; }
+    public int DayNumber { get; set; } = 1;
+    public DateTime LogDate { get; set; } = DateTime.Today;
+    public string Notes { get; set; } = "";
+}
+
 public class SavingsGoal
 {
     public int Id { get; set; }
@@ -64,6 +74,9 @@ public class SavingsGoal
     // --- Deadlines & Alerts ---
     public DateTime TargetDate { get; set; } = DateTime.Today.AddDays(14);
     public bool ReminderAlertEnabled { get; set; } = true;
+
+    // --- Navigation Property for Project Dev Logs (Fixes CS1061) ---
+    public List<ProjectDailyLog> DailyLogs { get; set; } = new();
 
     // --- Unified Completion Evaluation ---
     public bool IsCompleted => GoalType switch
@@ -126,7 +139,14 @@ public class SemesterCourse
     public int? ActiveSlideUnderway { get; set; } = null;
 
     [Required]
-    public string ClassDay { get; set; } = "Monday"; // Matches weekly timetable alignment
+    public string ClassDay { get; set; } = "Monday";
+
+    // Academic Confidence & Cognitive Weight
+    [Required]
+    public string Difficulty { get; set; } = "Medium"; // "Hard", "Medium", "Easy"
+
+    [Range(0, 100, ErrorMessage = "Understanding must be between 0% and 100%.")]
+    public int UnderstandingPercentage { get; set; } = 50;
 
     public string TargetGrade { get; set; } = "A";
     public DateTime? ExamDate { get; set; } = DateTime.Today.AddDays(14);

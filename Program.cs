@@ -34,6 +34,12 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite("Data Source=campusspend_v10.db"));
 
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlite("Data Source=campusspend_v11.db"));
+
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlite("Data Source=campusspend_v12.db"));
+
 var app = builder.Build();
 
 // Auto-create database schema and seed default budget if empty

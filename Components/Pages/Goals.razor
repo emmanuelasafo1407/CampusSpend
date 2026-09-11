@@ -139,10 +139,35 @@
 
                         @if (!string.IsNullOrEmpty(g.DeliverableNotes))
                         {
-                            <p class="small text-muted bg-light p-2 rounded mb-3">
+                            <p class="small text-muted bg-light p-2 rounded mb-2">
                                 <i class="bi bi-card-text me-1"></i> @g.DeliverableNotes
                             </p>
                         }
+
+                        <!-- Project Daily Log Preview & Extender -->
+                        <div class="bg-light p-2 rounded small mb-3 border">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold text-dark"><i class="bi bi-journal-code me-1"></i> Dev Log (@g.DailyLogs.Count)</span>
+                                <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-semibold" @onclick="() => OpenDailyLogModal(g)">+ Add Note</button>
+                            </div>
+                            @if (g.DailyLogs.Any())
+                            {
+                                var latest = g.DailyLogs.OrderByDescending(d => d.DayNumber).First();
+                                <div class="text-truncate text-muted"><strong>Day @latest.DayNumber:</strong> @latest.Notes</div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No daily milestones logged yet.</span>
+                            }
+                            <!-- Dynamic Deadline Extension -->
+                            <div class="d-flex justify-content-between align-items-center mt-2 border-top pt-1">
+                                <span class="text-muted">Extend:</span>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary py-0" @onclick="() => ExtendDeadline(g, 3)">+3d</button>
+                                    <button class="btn btn-outline-secondary py-0" @onclick="() => ExtendDeadline(g, 7)">+7d</button>
+                                </div>
+                            </div>
+                        </div>
                     }
 
                     <!-- Card Actions -->
@@ -338,16 +363,69 @@
     </div>
 }
 
+<!-- Modal 3: Daily Project Dev Log -->
+@if (showDailyLogModal && selectedGoalForLog != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Project Log: @selectedGoalForLog.Title</h5>
+                    <button type="button" class="btn-close" @onclick="() => showDailyLogModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Day Number:</label>
+                        <input type="number" class="form-control" @bind="newLogDayNumber" min="1" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">What did you accomplish today?</label>
+                        <textarea class="form-control" rows="3" @bind="newLogNotes" placeholder="e.g. Completed schematic capture and routed RF transmission PCB"></textarea>
+                    </div>
+                    
+                    <h6 class="fw-bold small text-dark mt-4 mb-2">Previous Daily Entries:</h6>
+                    <div class="list-group list-group-flush border rounded" style="max-height: 180px; overflow-y: auto;">
+                        @if (!selectedGoalForLog.DailyLogs.Any())
+                        {
+                            <div class="p-3 text-muted small text-center">No previous notes logged yet.</div>
+                        }
+                        else
+                        {
+                            @foreach (var log in selectedGoalForLog.DailyLogs.OrderByDescending(d => d.DayNumber))
+                            {
+                                <div class="list-group-item small">
+                                    <span class="badge bg-dark me-2">Day @log.DayNumber</span>
+                                    <span class="text-muted">(@log.LogDate.ToString("dd MMM")):</span>
+                                    <p class="mb-0 mt-1 text-dark">@log.Notes</p>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => showDailyLogModal = false">Close</button>
+                    <button class="btn btn-sm btn-primary" @onclick="SaveDailyLog">Save Day Note</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<SavingsGoal> activeGoals = new();
     private List<SavingsGoal> achievedGoals = new();
     private SavingsGoal goalModel = new();
     private SavingsGoal? selectedGoal = null;
+    private SavingsGoal? selectedGoalForLog = null;
     private int? editingGoalId = null;
     private decimal customDepositAmount = 50.00m;
     private bool showGoalModal = false;
     private bool showDepositModal = false;
+    private bool showDailyLogModal = false;
     private string selectedFilterType = "All";
+
+    private int newLogDayNumber = 1;
+    private string newLogNotes = "";
 
     private List<SavingsGoal> FilteredActiveGoals => selectedFilterType switch
     {
@@ -391,8 +469,54 @@
     private async Task LoadGoalsAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
-        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).OrderBy(g => g.TargetDate).ToListAsync();
-        achievedGoals = await db.SavingsGoals.Where(g => g.IsArchived).OrderByDescending(g => g.CompletedAt).ToListAsync();
+        activeGoals = await db.SavingsGoals
+            .Include(g => g.DailyLogs)
+            .Where(g => !g.IsArchived)
+            .OrderBy(g => g.TargetDate)
+            .ToListAsync();
+            
+        achievedGoals = await db.SavingsGoals
+            .Where(g => g.IsArchived)
+            .OrderByDescending(g => g.CompletedAt)
+            .ToListAsync();
+    }
+
+    private void OpenDailyLogModal(SavingsGoal g)
+    {
+        selectedGoalForLog = g;
+        newLogDayNumber = g.DailyLogs.Any() ? g.DailyLogs.Max(d => d.DayNumber) + 1 : 1;
+        newLogNotes = "";
+        showDailyLogModal = true;
+    }
+
+    private async Task SaveDailyLog()
+    {
+        if (selectedGoalForLog == null || string.IsNullOrWhiteSpace(newLogNotes)) return;
+
+        using var db = await DbFactory.CreateDbContextAsync();
+        db.ProjectDailyLogs.Add(new ProjectDailyLog
+        {
+            SavingsGoalId = selectedGoalForLog.Id,
+            DayNumber = newLogDayNumber,
+            LogDate = DateTime.Today,
+            Notes = newLogNotes
+        });
+        await db.SaveChangesAsync();
+
+        showDailyLogModal = false;
+        await LoadGoalsAsync();
+    }
+
+    private async Task ExtendDeadline(SavingsGoal g, int days)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SavingsGoals.FindAsync(g.Id);
+        if (match != null)
+        {
+            match.TargetDate = match.TargetDate.AddDays(days);
+            await db.SaveChangesAsync();
+        }
+        await LoadGoalsAsync();
     }
 
     private void OpenNewGoalModal()
@@ -524,11 +648,14 @@
         using var db = await DbFactory.CreateDbContextAsync();
         if (!db.SavingsGoals.Any())
         {
-            db.SavingsGoals.AddRange(
-                new SavingsGoal { Title = "Dell Precision Engineering Laptop", GoalType = "Financial", TargetAmount = 6500.00m, CurrentSaved = 2100.00m, SavingCadence = "Monthly", TargetDate = DateTime.Today.AddMonths(3) },
-                new SavingsGoal { Title = "CPEN 302 Lab Assignment 2 (Blazor Circuit)", GoalType = "AcademicAssignment", AssociatedCourse = "CPEN 302", ProjectProgressPercentage = 50, TargetDate = DateTime.Today.AddDays(4), DeliverableNotes = "SignalR and SQLite concurrency implementation" },
-                new SavingsGoal { Title = "UAV Spectrum Monitor Hardware Enclosure", GoalType = "PersonalProject", ProjectProgressPercentage = 75, TargetDate = DateTime.Today.AddDays(10), DeliverableNotes = "Complete 3D print file & solder RF receiver breakout" }
-            );
+            var g1 = new SavingsGoal { Title = "Dell Precision Engineering Laptop", GoalType = "Financial", TargetAmount = 6500.00m, CurrentSaved = 2100.00m, SavingCadence = "Monthly", TargetDate = DateTime.Today.AddMonths(3) };
+            var g2 = new SavingsGoal { Title = "CPEN 302 Lab Assignment 2 (Blazor Circuit)", GoalType = "AcademicAssignment", AssociatedCourse = "CPEN 302", ProjectProgressPercentage = 50, TargetDate = DateTime.Today.AddDays(4), DeliverableNotes = "SignalR and SQLite concurrency implementation" };
+            var g3 = new SavingsGoal { Title = "UAV Spectrum Monitor Hardware Enclosure", GoalType = "PersonalProject", ProjectProgressPercentage = 75, TargetDate = DateTime.Today.AddDays(10), DeliverableNotes = "Complete 3D print file & solder RF receiver breakout" };
+            
+            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 1, Notes = "Drafted schematic and selected RF breakout." });
+            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 2, Notes = "Soldered headers and started 3D enclosure CAD." });
+
+            db.SavingsGoals.AddRange(g1, g2, g3);
             await db.SaveChangesAsync();
             await LoadGoalsAsync();
         }
