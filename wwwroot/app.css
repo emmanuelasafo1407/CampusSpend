@@ -26,3 +26,36 @@
     font-size: 0.75rem;
     letter-spacing: 0.3px;
 }
+
+/* --- Force NavMenu Hover & Smooth Transitions --- */
+.nav-scrollable .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    font-weight: 500 !important;
+    color: #94a3b8 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.nav-scrollable .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    transform: translateX(6px) !important;
+}
+
+.nav-scrollable .nav-link:hover i {
+    color: #38bdf8 !important;
+    transform: scale(1.18) !important;
+}
+
+.nav-scrollable .nav-link i {
+    transition: transform 0.2s ease, color 0.2s ease !important;
+}
+
+.nav-scrollable .nav-link.active {
+    background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+}

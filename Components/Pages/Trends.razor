@@ -7,10 +7,10 @@
 
 <PageTitle>Analytics & Trends — CampusSpend</PageTitle>
 
-<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
-    <div class="mb-4">
-        <h2 class="fw-bold text-dark mb-0">Spending Velocity & Analytics</h2>
-        <small class="text-muted">Algorithmic analysis of cash outflows and category distributions.</small>
+<div class="container-fluid px-4 pt-5 pb-5 min-vh-100 bg-light">
+    <div class="mb-4 mt-3">
+        <h2 class="fw-bold text-dark mb-0">Spending Velocity & Categorical Pie Analysis</h2>
+        <small class="text-muted">Pure C# SVG Pie Chart, category distributions, and outflow acceleration.</small>
     </div>
 
     <!-- Velocity Indicator Card -->
@@ -33,8 +33,59 @@
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- 7-Day Chart -->
+    <div class="row g-4 mb-4">
+        <!-- SVG Pie Chart -->
+        <div class="col-lg-6">
+            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100">
+                <h6 class="fw-bold mb-3">Category Expenditure Share (Pie Chart)</h6>
+                @if (TotalSpent == 0)
+                {
+                    <div class="text-center py-5 text-muted">No expenses recorded to build chart.</div>
+                }
+                else
+                {
+                    <div class="row align-items-center">
+                        <div class="col-sm-6 text-center">
+                            <svg viewBox="-1.1 -1.1 2.2 2.2" style="transform: rotate(-90deg); max-width: 220px; width: 100%;">
+                                @{
+                                    double cumulative = 0.0;
+                                }
+                                @foreach (var slice in PieSlices)
+                                {
+                                    var startAngle = cumulative * 2 * Math.PI;
+                                    var endAngle = (cumulative + slice.Share) * 2 * Math.PI;
+                                    cumulative += slice.Share;
+
+                                    var x1 = Math.Cos(startAngle);
+                                    var y1 = Math.Sin(startAngle);
+                                    var x2 = Math.Cos(endAngle);
+                                    var y2 = Math.Sin(endAngle);
+
+                                    var largeArcFlag = slice.Share > 0.5 ? 1 : 0;
+                                    var pathData = $"M 0 0 L {x1:F4} {y1:F4} A 1 1 0 {largeArcFlag} 1 {x2:F4} {y2:F4} Z";
+
+                                    <path d="@pathData" fill="@slice.HexColor" stroke="#ffffff" stroke-width="0.02" />
+                                }
+                            </svg>
+                        </div>
+                        <div class="col-sm-6 mt-3 mt-sm-0">
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var slice in PieSlices)
+                                {
+                                    <li class="d-flex align-items-center mb-2 small">
+                                        <span class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: @slice.HexColor;"></span>
+                                        <span class="fw-semibold me-auto">@slice.Category</span>
+                                        <span class="text-muted">@((slice.Share * 100).ToString("F1"))%</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- 7-Day Outflow Trend -->
         <div class="col-lg-6">
             <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100">
                 <h6 class="fw-bold mb-3">Last 7 Days Outflow Distribution</h6>
@@ -62,38 +113,31 @@
                 </div>
             </div>
         </div>
-
-        <!-- Category Percentages -->
-        <div class="col-lg-6">
-            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100">
-                <h6 class="fw-bold mb-3">Categorical Share of Wallet</h6>
-                @if (TotalSpent == 0)
-                {
-                    <p class="text-muted small">No data to display.</p>
-                }
-                else
-                {
-                    @foreach (var cat in CategoryBreakdown)
-                    {
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between small fw-semibold mb-1">
-                                <span>@cat.Category</span>
-                                <span>GHS @cat.Amount.ToString("N2") (@cat.Percentage.ToString("F1")%)</span>
-                            </div>
-                            <div class="progress rounded-pill" style="height: 10px;">
-                                <div class="progress-bar rounded-pill @cat.ColorClass" style="width: @cat.Percentage%"></div>
-                            </div>
-                        </div>
-                    }
-                }
-            </div>
-        </div>
     </div>
 </div>
 
 @code {
     private List<Expense> allExpenses = new();
     private decimal TotalSpent => allExpenses.Sum(e => e.Amount);
+
+    private record PieSlice(string Category, double Share, string HexColor);
+
+    private List<PieSlice> PieSlices
+    {
+        get
+        {
+            if (TotalSpent == 0) return new();
+            return allExpenses
+                .GroupBy(e => e.Category)
+                .Select(g => new PieSlice(
+                    g.Key,
+                    (double)(g.Sum(x => x.Amount) / TotalSpent),
+                    GetHexColor(g.Key)
+                ))
+                .OrderByDescending(s => s.Share)
+                .ToList();
+        }
+    }
 
     private List<(DateTime Date, decimal Amount)> Last7DaysData =>
         Enumerable.Range(0, 7)
@@ -111,42 +155,19 @@
         }
     }
 
-    private record CategoryMetric(string Category, decimal Amount, double Percentage, string ColorClass);
-
-    private List<CategoryMetric> CategoryBreakdown
-    {
-        get
-        {
-            if (TotalSpent == 0) return new();
-            return allExpenses
-                .GroupBy(e => e.Category)
-                .Select(g => {
-                    var sum = g.Sum(x => x.Amount);
-                    return new CategoryMetric(
-                        g.Key,
-                        sum,
-                        (double)((sum / TotalSpent) * 100),
-                        GetColorForCategory(g.Key)
-                    );
-                })
-                .OrderByDescending(c => c.Amount)
-                .ToList();
-        }
-    }
-
     protected override async Task OnInitializedAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
         allExpenses = await db.Expenses.ToListAsync();
     }
 
-    private string GetColorForCategory(string category) => category switch
+    private string GetHexColor(string cat) => cat switch
     {
-        "Food" => "bg-success",
-        "Academics" => "bg-primary",
-        "Transport" => "bg-warning",
-        "Data/Airtime" => "bg-info",
-        "Utilities" => "bg-secondary",
-        _ => "bg-dark"
+        "Food" => "#22c55e",
+        "Academics" => "#3b82f6",
+        "Transport" => "#f59e0b",
+        "Data/Airtime" => "#ec4899",
+        "Utilities" => "#8b5cf6",
+        _ => "#64748b"
     };
 }

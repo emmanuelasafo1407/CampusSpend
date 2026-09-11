@@ -115,31 +115,49 @@
             </div>
         </div>
 
-        <!-- Active Goals Preview -->
+        <!-- Active Targets & Milestones Preview (Polymorphic Track Rendering) -->
         <div class="col-lg-5">
             <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0">Active Savings Targets</h6>
+                    <h6 class="fw-bold mb-0">Active Targets & Milestones</h6>
                     <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("goals")'>
                         Manage Goals →
                     </button>
                 </div>
                 @if (activeGoals.Count == 0)
                 {
-                    <p class="text-muted small py-4 text-center">No active savings targets set.</p>
+                    <p class="text-muted small py-4 text-center">No active targets set.</p>
                 }
                 else
                 {
-                    @foreach (var g in activeGoals.Take(3))
+                    @foreach (var g in activeGoals.Take(4))
                     {
-                        var pct = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
+                        var pct = g.GoalType == "Financial"
+                            ? (g.TargetAmount > 0 ? (double)(g.CurrentSaved / g.TargetAmount) * 100 : 0)
+                            : g.ProjectProgressPercentage;
+
                         <div class="mb-3 p-2 border rounded-3 bg-light">
-                            <div class="d-flex justify-content-between small fw-semibold mb-1">
-                                <span>@g.Title</span>
-                                <span>GHS @g.CurrentSaved.ToString("N2") / @g.TargetAmount.ToString("N2")</span>
+                            <div class="d-flex justify-content-between align-items-center small fw-semibold mb-1">
+                                <div>
+                                    <span class="badge @(g.GoalType == "Financial" ? "bg-primary" : g.GoalType == "AcademicAssignment" ? "bg-warning text-dark" : "bg-info text-dark") me-1" style="font-size: 0.65rem;">
+                                        @(g.GoalType == "Financial" ? "Finance" : g.GoalType == "AcademicAssignment" ? "Assignment" : "Project")
+                                    </span>
+                                    <span>@g.Title</span>
+                                </div>
+                                <span class="text-muted">
+                                    @if (g.GoalType == "Financial")
+                                    {
+                                        <span>GHS @g.CurrentSaved.ToString("N0") / @g.TargetAmount.ToString("N0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@g.ProjectProgressPercentage% Done</span>
+                                    }
+                                </span>
                             </div>
                             <div class="progress rounded-pill" style="height: 8px;">
-                                <div class="progress-bar rounded-pill bg-success" style="width: @(Math.Min(100, pct))%"></div>
+                                <div class="progress-bar rounded-pill @(pct >= 100 ? "bg-success" : g.GoalType == "Financial" ? "bg-primary" : "bg-warning")" 
+                                     style="width: @(Math.Min(100, pct))%"></div>
                             </div>
                         </div>
                     }

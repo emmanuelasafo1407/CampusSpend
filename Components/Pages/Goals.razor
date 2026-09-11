@@ -3,56 +3,157 @@
 @using CampusSpend.Models
 @using CampusSpend.Data
 @using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject IJSRuntime JS
 
-<PageTitle>Goals & Achievements — CampusSpend</PageTitle>
+<PageTitle>Goals & Growth Showcase — CampusSpend</PageTitle>
 
-<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
-    <!-- Active Goals -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid px-4 pt-5 pb-5 min-vh-100 bg-light">
+    
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-3">
         <div>
-            <h2 class="fw-bold text-dark mb-0">Savings Vault & Targets</h2>
-            <small class="text-muted">Allocate funds toward laptops, project kits, or emergency reserves.</small>
+            <h2 class="fw-bold text-dark mb-0">Unified Goals & Growth Command</h2>
+            <small class="text-muted">Multi-track financial targets, academic submissions, personal engineering projects & achievements.</small>
         </div>
-        <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenNewGoalModal">
-            <i class="bi bi-plus-circle me-1"></i> New Savings Goal
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenNewGoalModal">
+                <i class="bi bi-plus-circle me-1"></i> New Unified Goal
+            </button>
+            <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="SeedSampleGoals">
+                <i class="bi bi-magic me-1"></i> Sample Dataset
+            </button>
+        </div>
+    </div>
+
+    <!-- Growth & Congratulations Milestone Banner -->
+    <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white border-start border-4 border-success">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-success-subtle text-success border border-success px-3 py-1">
+                        <i class="bi bi-award-fill me-1"></i> Student Rank: @StudentGrowthRank
+                    </span>
+                    <span class="badge bg-primary text-white">@achievedGoals.Count Completed Milestones</span>
+                </div>
+                <h4 class="fw-bold text-dark mb-1">@GrowthCongratulationsHeadline</h4>
+                <p class="text-muted small mb-0">@GrowthCongratulationsMessage</p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="d-inline-block text-center p-3 bg-light rounded-3 border">
+                    <small class="text-muted text-uppercase d-block fw-semibold">Saved Across Goals</small>
+                    <span class="fs-4 fw-bold text-success">GHS @activeGoals.Where(g => g.GoalType == "Financial").Sum(g => g.CurrentSaved).ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Track Filter Nav Tabs -->
+    <div class="d-flex gap-2 mb-3">
+        <button class="btn btn-sm @(selectedFilterType == "All" ? "btn-dark" : "btn-outline-dark")" @onclick='() => selectedFilterType = "All"'>
+            All Tracks (@activeGoals.Count)
+        </button>
+        <button class="btn btn-sm @(selectedFilterType == "Financial" ? "btn-primary" : "btn-outline-primary")" @onclick='() => selectedFilterType = "Financial"'>
+            <i class="bi bi-cash-stack me-1"></i> Financial Targets (@activeGoals.Count(g => g.GoalType == "Financial"))
+        </button>
+        <button class="btn btn-sm @(selectedFilterType == "AcademicAssignment" ? "btn-warning text-dark" : "btn-outline-warning text-dark")" @onclick='() => selectedFilterType = "AcademicAssignment"'>
+            <i class="bi bi-journal-text me-1"></i> Assignments (@activeGoals.Count(g => g.GoalType == "AcademicAssignment"))
+        </button>
+        <button class="btn btn-sm @(selectedFilterType == "PersonalProject" ? "btn-info text-dark" : "btn-outline-info text-dark")" @onclick='() => selectedFilterType = "PersonalProject"'>
+            <i class="bi bi-rocket-takeoff me-1"></i> Personal Projects (@activeGoals.Count(g => g.GoalType == "PersonalProject"))
         </button>
     </div>
 
-    <!-- Active Targets Grid -->
-    <h5 class="fw-bold mb-3 text-secondary">Active Campaigns (@activeGoals.Count)</h5>
+    <!-- Active Goals Grid -->
     <div class="row g-3 mb-5">
-        @if (activeGoals.Count == 0)
+        @if (FilteredActiveGoals.Count == 0)
         {
             <div class="col-12">
                 <div class="card p-4 text-center border-0 shadow-sm bg-white">
-                    <p class="text-muted mb-0">No active savings targets. Click "+ New Savings Goal" to create one!</p>
+                    <p class="text-muted mb-0">No active goals in this category. Click "+ New Unified Goal" to create one!</p>
                 </div>
             </div>
         }
-        @foreach (var g in activeGoals)
+        @foreach (var g in FilteredActiveGoals)
         {
-            var percent = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
+            var daysRemaining = (g.TargetDate.Date - DateTime.Today).Days;
             <div class="col-md-6 col-xl-4">
                 <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold fs-5 text-dark">@g.Title</span>
-                        <span class="badge @(g.IsCompleted ? "bg-success" : "bg-primary")">
-                            @(g.IsCompleted ? "100% Ready 🎉" : "In Progress")
+                    
+                    <!-- Goal Type Badge & Status -->
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge @GetGoalTypeBadgeClass(g.GoalType)">
+                            <i class="bi @GetGoalTypeIcon(g.GoalType) me-1"></i> @FormatGoalType(g.GoalType)
+                        </span>
+                        <span class="badge @(g.IsCompleted ? "bg-success" : daysRemaining < 3 ? "bg-danger" : "bg-light text-dark border")">
+                            @(g.IsCompleted ? "Ready to Claim 🎉" : daysRemaining <= 0 ? "Due Today" : $"{daysRemaining} Days Left")
                         </span>
                     </div>
 
-                    <div class="small text-muted mb-2">
-                        Target: GHS @g.TargetAmount.ToString("N2") | Saved: <strong class="text-primary">GHS @g.CurrentSaved.ToString("N2")</strong>
-                    </div>
+                    <h5 class="fw-bold text-dark mb-1">@g.Title</h5>
 
-                    <div class="progress mb-3 rounded-pill" style="height: 10px;">
-                        <div class="progress-bar rounded-pill @(g.IsCompleted ? "bg-success" : "bg-primary")"
-                             style="width: @(Math.Min(100, percent))%"></div>
-                    </div>
+                    @if (!string.IsNullOrEmpty(g.AssociatedCourse))
+                    {
+                        <div class="small text-muted mb-2">
+                            Course: <span class="badge bg-dark">@g.AssociatedCourse</span>
+                        </div>
+                    }
 
-                    <div class="d-flex gap-2 mt-auto">
-                        @if (!g.IsCompleted)
+                    <!-- Track 1: Financial Goal Display -->
+                    @if (g.GoalType == "Financial")
+                    {
+                        var pct = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
+                        <div class="small text-muted mb-2 d-flex justify-content-between">
+                            <span>Saved: <strong class="text-success">GHS @g.CurrentSaved.ToString("N2")</strong></span>
+                            <span>Cap: GHS @g.TargetAmount.ToString("N2")</span>
+                        </div>
+
+                        <div class="progress rounded-pill mb-2" style="height: 10px;">
+                            <div class="progress-bar rounded-pill @(g.IsCompleted ? "bg-success" : "bg-primary")"
+                                 style="width: @(Math.Min(100, pct))%"></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between small text-muted mb-3">
+                            <span>Cadence: <strong>@g.SavingCadence</strong></span>
+                            @if (daysRemaining > 0 && !g.IsCompleted)
+                            {
+                                var needed = g.TargetAmount - g.CurrentSaved;
+                                var dailyPace = needed / Math.Max(1, daysRemaining);
+                                <span class="text-primary fw-semibold">Pace: ~GHS @dailyPace.ToString("F1")/day</span>
+                            }
+                        </div>
+                    }
+                    <!-- Track 2 & 3: Assignments & Projects Progress Display -->
+                    else
+                    {
+                        <div class="small text-muted mb-2 d-flex justify-content-between">
+                            <span>Progress: <strong class="text-dark">@g.ProjectProgressPercentage%</strong></span>
+                            <span>Deadline: @g.TargetDate.ToString("dd MMM yyyy")</span>
+                        </div>
+
+                        <div class="progress rounded-pill mb-2" style="height: 10px;">
+                            <div class="progress-bar rounded-pill @(g.IsCompleted ? "bg-success" : "bg-warning")"
+                                 style="width: @(Math.Min(100, g.ProjectProgressPercentage))%"></div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(g.DeliverableNotes))
+                        {
+                            <p class="small text-muted bg-light p-2 rounded mb-3">
+                                <i class="bi bi-card-text me-1"></i> @g.DeliverableNotes
+                            </p>
+                        }
+                    }
+
+                    <!-- Card Actions -->
+                    <div class="d-flex gap-2 mt-auto pt-2 border-top">
+                        @if (g.IsCompleted)
+                        {
+                            <button class="btn btn-sm btn-warning text-dark fw-bold flex-fill shadow-sm" @onclick="() => ClaimToAchievements(g)">
+                                <i class="bi bi-trophy-fill me-1"></i> Claim to Achievements
+                            </button>
+                        }
+                        else if (g.GoalType == "Financial")
                         {
                             <button class="btn btn-sm btn-success flex-fill" @onclick="() => OpenDepositModal(g)">
                                 <i class="bi bi-cash-stack me-1"></i> Deposit
@@ -60,25 +161,26 @@
                         }
                         else
                         {
-                            <button class="btn btn-sm btn-warning text-dark fw-bold flex-fill" @onclick="() => ArchiveGoal(g)">
-                                <i class="bi bi-trophy-fill me-1"></i> Claim to Achievements
+                            <button class="btn btn-sm btn-outline-primary flex-fill" @onclick="() => AdvanceProgress(g, 25)">
+                                +25% Progress
                             </button>
                         }
-                        <button class="btn btn-sm btn-outline-secondary" title="Edit" @onclick="() => OpenEditGoalModal(g)">Edit</button>
+                        <button class="btn btn-sm btn-outline-secondary" title="Edit Target" @onclick="() => OpenEditGoalModal(g)">Edit</button>
                         <button class="btn btn-sm btn-outline-danger" title="Delete" @onclick="() => DeleteGoal(g.Id)">✕</button>
                     </div>
+
                 </div>
             </div>
         }
     </div>
 
-    <!-- Achievements / Completed Goals Section -->
+    <!-- Hall of Achievements Showcase -->
     <div class="border-top pt-4">
         <div class="d-flex align-items-center mb-3">
-            <i class="bi bi-trophy-fill text-warning fs-3 me-2"></i>
+            <i class="bi bi-trophy-fill text-warning fs-2 me-2"></i>
             <div>
                 <h4 class="fw-bold mb-0 text-dark">Hall of Achievements</h4>
-                <small class="text-muted">Targets achieved and claimed.</small>
+                <small class="text-muted">Permanent record of completed targets, finished assignments, and shipped projects.</small>
             </div>
         </div>
 
@@ -87,7 +189,7 @@
             {
                 <div class="col-12">
                     <div class="p-3 text-center text-muted border rounded bg-white small">
-                        No completed achievements archived yet. Complete a goal and hit "Claim" to preserve it here!
+                        No achievements archived yet. Complete any financial or academic goal and click "Claim to Achievements" to display it here!
                     </div>
                 </div>
             }
@@ -99,8 +201,18 @@
                             <span class="fw-bold text-success fs-6">🏆 @a.Title</span>
                             <span class="badge bg-success-subtle text-success border border-success">Unlocked</span>
                         </div>
-                        <div class="small text-muted mb-2">Funded: GHS @a.TargetAmount.ToString("N2")</div>
-                        <small class="text-muted">Archived on: @(a.CompletedAt?.ToString("dd MMM yyyy") ?? "Recently")</small>
+                        <div class="small text-muted mb-2">
+                            Type: <strong>@FormatGoalType(a.GoalType)</strong>
+                            @if (a.GoalType == "Financial")
+                            {
+                                <span>· Funded: GHS @a.TargetAmount.ToString("N2")</span>
+                            }
+                            else if (!string.IsNullOrEmpty(a.AssociatedCourse))
+                            {
+                                <span>· Course: @a.AssociatedCourse</span>
+                            }
+                        </div>
+                        <small class="text-muted">Honored on: @(a.CompletedAt?.ToString("dd MMM yyyy") ?? "Recently")</small>
                     </div>
                 </div>
             }
@@ -108,43 +220,101 @@
     </div>
 </div>
 
-<!-- Modal 1: Create / Edit Goal -->
+<!-- Modal 1: Create / Edit Unified Goal -->
 @if (showGoalModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">@(editingGoalId.HasValue ? "Update Goal" : "New Savings Target")</h5>
+                    <h5 class="modal-title fw-bold">@(editingGoalId.HasValue ? "Update Goal" : "New Unified Goal")</h5>
                     <button type="button" class="btn-close" @onclick="() => showGoalModal = false"></button>
                 </div>
                 <div class="modal-body">
+                    
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Target Title:</label>
-                        <input type="text" class="form-control" @bind="goalModel.Title" placeholder="e.g. Engineering Drone Components" />
+                        <label class="form-label small fw-semibold">Goal Category:</label>
+                        <select class="form-select" @bind="goalModel.GoalType">
+                            <option value="Financial">💰 Financial Purchase / Savings Target</option>
+                            <option value="AcademicAssignment">📚 Course Assignment / Lab Submission</option>
+                            <option value="PersonalProject">🛠️ Personal / Engineering Project</option>
+                        </select>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Target Budget (GHS):</label>
-                        <input type="number" class="form-control" @bind="goalModel.TargetAmount" />
+                        <label class="form-label small fw-semibold">Goal Title:</label>
+                        <input type="text" class="form-control" @bind="goalModel.Title" placeholder="e.g. Quadcopter Payload Parts / Lab Report 3" />
                     </div>
-                    @if (!editingGoalId.HasValue)
+
+                    @if (goalModel.GoalType == "Financial")
+                    {
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Target Amount (GHS):</label>
+                                <input type="number" class="form-control" @bind="goalModel.TargetAmount" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Savings Cadence:</label>
+                                <select class="form-select" @bind="goalModel.SavingCadence">
+                                    <option value="Daily">Daily Target</option>
+                                    <option value="Weekly">Weekly Target</option>
+                                    <option value="Monthly">Monthly Target</option>
+                                    <option value="Yearly">Yearly Target</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        @if (!editingGoalId.HasValue)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Initial Seed Deposit (GHS):</label>
+                                <input type="number" class="form-control" @bind="goalModel.CurrentSaved" />
+                            </div>
+                        }
+                    }
+                    else
                     {
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Initial Seed Deposit (GHS):</label>
-                            <input type="number" class="form-control" @bind="goalModel.CurrentSaved" />
+                            <label class="form-label small fw-semibold">Associated Course (Optional):</label>
+                            <input type="text" class="form-control" @bind="goalModel.AssociatedCourse" placeholder="e.g. CPEN 302 or ENGR 111" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Deliverables / Milestone Notes:</label>
+                            <textarea class="form-control" rows="2" @bind="goalModel.DeliverableNotes" placeholder="Requirements, hardware components needed, or GitHub link"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Initial Completion (%):</label>
+                            <input type="number" class="form-control" @bind="goalModel.ProjectProgressPercentage" min="0" max="100" />
                         </div>
                     }
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Target Completion Deadline:</label>
+                            <input type="date" class="form-control" @bind="goalModel.TargetDate" />
+                        </div>
+                    </div>
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" @bind="goalModel.ReminderAlertEnabled" id="remindCheck" />
+                        <label class="form-check-label small" for="remindCheck">
+                            Enable deadline alerts & pacing reminders
+                        </label>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="() => showGoalModal = false">Cancel</button>
-                    <button class="btn btn-success" @onclick="SaveGoal">Save Target</button>
+                    <button class="btn btn-primary" @onclick="SaveGoal">Save Goal</button>
                 </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Modal 2: Custom Deposit -->
+<!-- Modal 2: Financial Deposit -->
 @if (showDepositModal && selectedGoal != null)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
@@ -177,6 +347,41 @@
     private decimal customDepositAmount = 50.00m;
     private bool showGoalModal = false;
     private bool showDepositModal = false;
+    private string selectedFilterType = "All";
+
+    private List<SavingsGoal> FilteredActiveGoals => selectedFilterType switch
+    {
+        "Financial" => activeGoals.Where(g => g.GoalType == "Financial").ToList(),
+        "AcademicAssignment" => activeGoals.Where(g => g.GoalType == "AcademicAssignment").ToList(),
+        "PersonalProject" => activeGoals.Where(g => g.GoalType == "PersonalProject").ToList(),
+        _ => activeGoals
+    };
+
+    // Congratulatory & Growth Logic
+    private string StudentGrowthRank => achievedGoals.Count switch
+    {
+        >= 8 => "Grand Scholar & Financial Master 🌟",
+        >= 5 => "Disciplined High-Achiever 🚀",
+        >= 2 => "Focused Rising Star ⭐",
+        >= 1 => "Initiate Builder 🎯",
+        _ => "Novice Explorer"
+    };
+
+    private string GrowthCongratulationsHeadline => achievedGoals.Count switch
+    {
+        >= 5 => "Exceptional Momentum! You are crushing your academic & financial goals.",
+        >= 2 => "Steady Progress! Your consistency is yielding real growth.",
+        >= 1 => "Great start! Your first milestone is unlocked.",
+        _ => "Welcome to your goal command! Set your milestones to begin leveling up."
+    };
+
+    private string GrowthCongratulationsMessage => achievedGoals.Count switch
+    {
+        >= 5 => "You have demonstrated sustained discipline in both project delivery and capital preservation.",
+        >= 2 => "Keep pacing your savings and project deadlines to unlock higher scholar tiers.",
+        >= 1 => "Every completed goal moves you closer to total academic and personal independence.",
+        _ => "Define your next hardware kit purchase, lab assignment, or personal build above."
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -186,14 +391,14 @@
     private async Task LoadGoalsAsync()
     {
         using var db = await DbFactory.CreateDbContextAsync();
-        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
+        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).OrderBy(g => g.TargetDate).ToListAsync();
         achievedGoals = await db.SavingsGoals.Where(g => g.IsArchived).OrderByDescending(g => g.CompletedAt).ToListAsync();
     }
 
     private void OpenNewGoalModal()
     {
         editingGoalId = null;
-        goalModel = new SavingsGoal();
+        goalModel = new SavingsGoal { TargetDate = DateTime.Today.AddDays(14) };
         showGoalModal = true;
     }
 
@@ -204,8 +409,15 @@
         {
             Id = g.Id,
             Title = g.Title,
+            GoalType = g.GoalType,
             TargetAmount = g.TargetAmount,
-            CurrentSaved = g.CurrentSaved
+            CurrentSaved = g.CurrentSaved,
+            SavingCadence = g.SavingCadence,
+            AssociatedCourse = g.AssociatedCourse,
+            ProjectProgressPercentage = g.ProjectProgressPercentage,
+            DeliverableNotes = g.DeliverableNotes,
+            TargetDate = g.TargetDate,
+            ReminderAlertEnabled = g.ReminderAlertEnabled
         };
         showGoalModal = true;
     }
@@ -219,15 +431,24 @@
             if (match != null)
             {
                 match.Title = goalModel.Title;
+                match.GoalType = goalModel.GoalType;
                 match.TargetAmount = goalModel.TargetAmount;
+                match.SavingCadence = goalModel.SavingCadence;
+                match.AssociatedCourse = goalModel.AssociatedCourse;
+                match.ProjectProgressPercentage = Math.Clamp(goalModel.ProjectProgressPercentage, 0, 100);
+                match.DeliverableNotes = goalModel.DeliverableNotes;
+                match.TargetDate = goalModel.TargetDate;
+                match.ReminderAlertEnabled = goalModel.ReminderAlertEnabled;
                 await db.SaveChangesAsync();
             }
         }
         else
         {
+            goalModel.ProjectProgressPercentage = Math.Clamp(goalModel.ProjectProgressPercentage, 0, 100);
             db.SavingsGoals.Add(goalModel);
             await db.SaveChangesAsync();
         }
+
         showGoalModal = false;
         await LoadGoalsAsync();
     }
@@ -253,7 +474,19 @@
         await LoadGoalsAsync();
     }
 
-    private async Task ArchiveGoal(SavingsGoal g)
+    private async Task AdvanceProgress(SavingsGoal g, int delta)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.SavingsGoals.FindAsync(g.Id);
+        if (match != null)
+        {
+            match.ProjectProgressPercentage = Math.Clamp(match.ProjectProgressPercentage + delta, 0, 100);
+            await db.SaveChangesAsync();
+        }
+        await LoadGoalsAsync();
+    }
+
+    private async Task ClaimToAchievements(SavingsGoal g)
     {
         using var db = await DbFactory.CreateDbContextAsync();
         var match = await db.SavingsGoals.FindAsync(g.Id);
@@ -263,6 +496,14 @@
             match.CompletedAt = DateTime.Now;
             await db.SaveChangesAsync();
         }
+
+        try
+        {
+            await JS.InvokeVoidAsync("playStudyChime");
+            await JS.InvokeVoidAsync("triggerStudyAlert", "Milestone Unlocked! 🏆", $"Congratulations on completing '{g.Title}'!");
+        }
+        catch { }
+
         await LoadGoalsAsync();
     }
 
@@ -277,4 +518,40 @@
         }
         await LoadGoalsAsync();
     }
+
+    private async Task SeedSampleGoals()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        if (!db.SavingsGoals.Any())
+        {
+            db.SavingsGoals.AddRange(
+                new SavingsGoal { Title = "Dell Precision Engineering Laptop", GoalType = "Financial", TargetAmount = 6500.00m, CurrentSaved = 2100.00m, SavingCadence = "Monthly", TargetDate = DateTime.Today.AddMonths(3) },
+                new SavingsGoal { Title = "CPEN 302 Lab Assignment 2 (Blazor Circuit)", GoalType = "AcademicAssignment", AssociatedCourse = "CPEN 302", ProjectProgressPercentage = 50, TargetDate = DateTime.Today.AddDays(4), DeliverableNotes = "SignalR and SQLite concurrency implementation" },
+                new SavingsGoal { Title = "UAV Spectrum Monitor Hardware Enclosure", GoalType = "PersonalProject", ProjectProgressPercentage = 75, TargetDate = DateTime.Today.AddDays(10), DeliverableNotes = "Complete 3D print file & solder RF receiver breakout" }
+            );
+            await db.SaveChangesAsync();
+            await LoadGoalsAsync();
+        }
+    }
+
+    private string FormatGoalType(string type) => type switch
+    {
+        "AcademicAssignment" => "Assignment",
+        "PersonalProject" => "Personal Project",
+        _ => "Financial Target"
+    };
+
+    private string GetGoalTypeBadgeClass(string type) => type switch
+    {
+        "AcademicAssignment" => "bg-warning-subtle text-dark border border-warning",
+        "PersonalProject" => "bg-info-subtle text-dark border border-info",
+        _ => "bg-primary-subtle text-primary border border-primary"
+    };
+
+    private string GetGoalTypeIcon(string type) => type switch
+    {
+        "AcademicAssignment" => "bi-journal-check",
+        "PersonalProject" => "bi-tools",
+        _ => "bi-piggy-bank"
+    };
 }
