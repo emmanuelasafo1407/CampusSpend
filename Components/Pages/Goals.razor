@@ -14,8 +14,8 @@
     <!-- Top Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-3">
         <div>
-            <h2 class="fw-bold text-dark mb-0">Unified Goals & Growth Command</h2>
-            <small class="text-muted">Multi-track financial targets, academic submissions, personal engineering projects & achievements.</small>
+            <h2 class="fw-bold text-dark mb-0">Unified Goals & Project Command</h2>
+            <small class="text-muted">Financial savings, academic assignments, and personal builds with day-by-day logs.</small>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
             <button class="btn btn-primary btn-sm shadow-sm" @onclick="OpenNewGoalModal">
@@ -27,7 +27,7 @@
         </div>
     </div>
 
-    <!-- Growth & Congratulations Milestone Banner -->
+    <!-- Growth & Milestone Rank Banner -->
     <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white border-start border-4 border-success">
         <div class="row align-items-center">
             <div class="col-md-8">
@@ -49,8 +49,8 @@
         </div>
     </div>
 
-    <!-- Track Filter Nav Tabs -->
-    <div class="d-flex gap-2 mb-3">
+    <!-- Filter Buttons -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
         <button class="btn btn-sm @(selectedFilterType == "All" ? "btn-dark" : "btn-outline-dark")" @onclick='() => selectedFilterType = "All"'>
             All Tracks (@activeGoals.Count)
         </button>
@@ -65,7 +65,7 @@
         </button>
     </div>
 
-    <!-- Active Goals Grid -->
+    <!-- Active Goals Cards -->
     <div class="row g-3 mb-5">
         @if (FilteredActiveGoals.Count == 0)
         {
@@ -81,7 +81,7 @@
             <div class="col-md-6 col-xl-4">
                 <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100 position-relative">
                     
-                    <!-- Goal Type Badge & Status -->
+                    <!-- Header Badges -->
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <span class="badge @GetGoalTypeBadgeClass(g.GoalType)">
                             <i class="bi @GetGoalTypeIcon(g.GoalType) me-1"></i> @FormatGoalType(g.GoalType)
@@ -100,7 +100,6 @@
                         </div>
                     }
 
-                    <!-- Track 1: Financial Goal Display -->
                     @if (g.GoalType == "Financial")
                     {
                         var pct = g.TargetAmount > 0 ? (g.CurrentSaved / g.TargetAmount) * 100 : 0;
@@ -124,7 +123,6 @@
                             }
                         </div>
                     }
-                    <!-- Track 2 & 3: Assignments & Projects Progress Display -->
                     else
                     {
                         <div class="small text-muted mb-2 d-flex justify-content-between">
@@ -144,33 +142,46 @@
                             </p>
                         }
 
-                        <!-- Project Daily Log Preview & Extender -->
+                        <!-- Interactive Dev Log Summary Container -->
                         <div class="bg-light p-2 rounded small mb-3 border">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="fw-bold text-dark"><i class="bi bi-journal-code me-1"></i> Dev Log (@g.DailyLogs.Count)</span>
-                                <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-semibold" @onclick="() => OpenDailyLogModal(g)">+ Add Note</button>
+                                <button class="btn btn-link btn-sm p-0 text-dark fw-bold text-decoration-none" 
+                                        title="Click to view full log timeline"
+                                        @onclick="() => OpenHistoryModal(g)">
+                                    <i class="bi bi-journal-code me-1 text-primary"></i>Dev Log (@g.DailyLogs.Count)
+                                    <i class="bi bi-chevron-right small text-muted ms-1"></i>
+                                </button>
+                                <button class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-semibold" @onclick="() => OpenNewDailyLogModal(g)">
+                                    + Add Note
+                                </button>
                             </div>
+
                             @if (g.DailyLogs.Any())
                             {
                                 var latest = g.DailyLogs.OrderByDescending(d => d.DayNumber).First();
-                                <div class="text-truncate text-muted"><strong>Day @latest.DayNumber:</strong> @latest.Notes</div>
+                                <div class="text-truncate text-muted cursor-pointer" role="button" @onclick="() => OpenHistoryModal(g)">
+                                    <strong>Day @latest.DayNumber:</strong> @latest.Notes
+                                </div>
                             }
                             else
                             {
-                                <span class="text-muted">No daily milestones logged yet.</span>
+                                <div class="text-muted" role="button" @onclick="() => OpenNewDailyLogModal(g)">
+                                    No daily notes yet. Click to log Day 1.
+                                </div>
                             }
+
                             <!-- Dynamic Deadline Extension -->
                             <div class="d-flex justify-content-between align-items-center mt-2 border-top pt-1">
-                                <span class="text-muted">Extend:</span>
+                                <span class="text-muted" style="font-size: 0.75rem;">Extend Deadline:</span>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-secondary py-0" @onclick="() => ExtendDeadline(g, 3)">+3d</button>
-                                    <button class="btn btn-outline-secondary py-0" @onclick="() => ExtendDeadline(g, 7)">+7d</button>
+                                    <button class="btn btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @onclick="() => ExtendDeadline(g, 3)">+3d</button>
+                                    <button class="btn btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @onclick="() => ExtendDeadline(g, 7)">+7d</button>
                                 </div>
                             </div>
                         </div>
                     }
 
-                    <!-- Card Actions -->
+                    <!-- Bottom Action Buttons -->
                     <div class="d-flex gap-2 mt-auto pt-2 border-top">
                         @if (g.IsCompleted)
                         {
@@ -214,7 +225,7 @@
             {
                 <div class="col-12">
                     <div class="p-3 text-center text-muted border rounded bg-white small">
-                        No achievements archived yet. Complete any financial or academic goal and click "Claim to Achievements" to display it here!
+                        No achievements archived yet. Complete any goal and click "Claim to Achievements" to display it here!
                     </div>
                 </div>
             }
@@ -245,7 +256,114 @@
     </div>
 </div>
 
-<!-- Modal 1: Create / Edit Unified Goal -->
+<!-- Modal 1: Dev Log History Timeline Viewer (With Edit & Delete Actions) -->
+@if (showHistoryModal && selectedGoalForLog != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">
+                            <i class="bi bi-journal-code text-primary me-2"></i>@selectedGoalForLog.Title — Daily Log Timeline
+                        </h5>
+                        <small class="text-muted">Target Deadline: @selectedGoalForLog.TargetDate.ToString("dd MMMM yyyy")</small>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="() => showHistoryModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!selectedGoalForLog.DailyLogs.Any())
+                    {
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-journal-x fs-1 d-block mb-2 text-secondary"></i>
+                            <p class="mb-2">No progress notes logged yet for this project.</p>
+                            <button class="btn btn-sm btn-primary" @onclick="() => OpenNewDailyLogModal(selectedGoalForLog)">
+                                + Log Day 1 Progress
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="timeline ps-2 pe-1" style="max-height: 420px; overflow-y: auto;">
+                            @foreach (var log in selectedGoalForLog.DailyLogs.OrderBy(d => d.DayNumber))
+                            {
+                                <div class="card mb-3 border-0 border-start border-3 border-primary bg-light shadow-sm position-relative">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-dark fw-semibold">Day @log.DayNumber</span>
+                                                <span class="small text-muted">
+                                                    <i class="bi bi-calendar-event me-1"></i>@log.LogDate.ToString("dddd, dd MMM yyyy")
+                                                </span>
+                                            </div>
+                                            <!-- Edit & Delete Buttons for Each Day Note -->
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-secondary py-0 px-2" title="Edit Note" @onclick="() => OpenEditDailyLogModal(log)">
+                                                    <i class="bi bi-pencil me-1"></i>Edit
+                                                </button>
+                                                <button class="btn btn-outline-danger py-0 px-2" title="Delete Note" @onclick="() => DeleteDailyLog(log.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p class="card-text text-dark mb-0 mt-2" style="white-space: pre-wrap;">@log.Notes</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenNewDailyLogModal(selectedGoalForLog)">
+                        <i class="bi bi-plus-lg me-1"></i> Add Another Day Note
+                    </button>
+                    <button class="btn btn-sm btn-secondary" @onclick="() => showHistoryModal = false">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal 2: Add / Edit Daily Log Form -->
+@if (showDailyLogModal && selectedGoalForLog != null)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">
+                        @(editingLogId.HasValue ? $"Edit Day {newLogDayNumber} Note" : $"Log Daily Progress: {selectedGoalForLog.Title}")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => showDailyLogModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Day Number:</label>
+                            <input type="number" class="form-control" @bind="newLogDayNumber" min="1" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Date Logged:</label>
+                            <input type="date" class="form-control" @bind="newLogDate" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">What was accomplished on Day @newLogDayNumber?</label>
+                        <textarea class="form-control" rows="4" @bind="newLogNotes" placeholder="Describe the milestones achieved, features coded, or bugs fixed"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => showDailyLogModal = false">Cancel</button>
+                    <button class="btn btn-sm btn-primary" @onclick="SaveDailyLog">
+                        @(editingLogId.HasValue ? "Update Note" : "Save Day Note")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal 3: Create / Edit Unified Goal -->
 @if (showGoalModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
@@ -256,7 +374,6 @@
                     <button type="button" class="btn-close" @onclick="() => showGoalModal = false"></button>
                 </div>
                 <div class="modal-body">
-                    
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Goal Category:</label>
                         <select class="form-select" @bind="goalModel.GoalType">
@@ -315,20 +432,10 @@
                         </div>
                     }
 
-                    <div class="row g-2 mb-2">
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Target Completion Deadline:</label>
-                            <input type="date" class="form-control" @bind="goalModel.TargetDate" />
-                        </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Target Completion Deadline:</label>
+                        <input type="date" class="form-control" @bind="goalModel.TargetDate" />
                     </div>
-
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" @bind="goalModel.ReminderAlertEnabled" id="remindCheck" />
-                        <label class="form-check-label small" for="remindCheck">
-                            Enable deadline alerts & pacing reminders
-                        </label>
-                    </div>
-
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="() => showGoalModal = false">Cancel</button>
@@ -339,7 +446,7 @@
     </div>
 }
 
-<!-- Modal 2: Financial Deposit -->
+<!-- Modal 4: Financial Deposit -->
 @if (showDepositModal && selectedGoal != null)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
@@ -363,54 +470,6 @@
     </div>
 }
 
-<!-- Modal 3: Daily Project Dev Log -->
-@if (showDailyLogModal && selectedGoalForLog != null)
-{
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-3">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Project Log: @selectedGoalForLog.Title</h5>
-                    <button type="button" class="btn-close" @onclick="() => showDailyLogModal = false"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Day Number:</label>
-                        <input type="number" class="form-control" @bind="newLogDayNumber" min="1" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">What did you accomplish today?</label>
-                        <textarea class="form-control" rows="3" @bind="newLogNotes" placeholder="e.g. Completed schematic capture and routed RF transmission PCB"></textarea>
-                    </div>
-                    
-                    <h6 class="fw-bold small text-dark mt-4 mb-2">Previous Daily Entries:</h6>
-                    <div class="list-group list-group-flush border rounded" style="max-height: 180px; overflow-y: auto;">
-                        @if (!selectedGoalForLog.DailyLogs.Any())
-                        {
-                            <div class="p-3 text-muted small text-center">No previous notes logged yet.</div>
-                        }
-                        else
-                        {
-                            @foreach (var log in selectedGoalForLog.DailyLogs.OrderByDescending(d => d.DayNumber))
-                            {
-                                <div class="list-group-item small">
-                                    <span class="badge bg-dark me-2">Day @log.DayNumber</span>
-                                    <span class="text-muted">(@log.LogDate.ToString("dd MMM")):</span>
-                                    <p class="mb-0 mt-1 text-dark">@log.Notes</p>
-                                </div>
-                            }
-                        }
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-sm btn-secondary" @onclick="() => showDailyLogModal = false">Close</button>
-                    <button class="btn btn-sm btn-primary" @onclick="SaveDailyLog">Save Day Note</button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
     private List<SavingsGoal> activeGoals = new();
     private List<SavingsGoal> achievedGoals = new();
@@ -419,12 +478,17 @@
     private SavingsGoal? selectedGoalForLog = null;
     private int? editingGoalId = null;
     private decimal customDepositAmount = 50.00m;
+
     private bool showGoalModal = false;
     private bool showDepositModal = false;
     private bool showDailyLogModal = false;
+    private bool showHistoryModal = false;
     private string selectedFilterType = "All";
 
+    // Edit vs Add tracking for Dev Logs
+    private int? editingLogId = null;
     private int newLogDayNumber = 1;
+    private DateTime newLogDate = DateTime.Today;
     private string newLogNotes = "";
 
     private List<SavingsGoal> FilteredActiveGoals => selectedFilterType switch
@@ -435,7 +499,6 @@
         _ => activeGoals
     };
 
-    // Congratulatory & Growth Logic
     private string StudentGrowthRank => achievedGoals.Count switch
     {
         >= 8 => "Grand Scholar & Financial Master 🌟",
@@ -481,11 +544,28 @@
             .ToListAsync();
     }
 
-    private void OpenDailyLogModal(SavingsGoal g)
+    private void OpenHistoryModal(SavingsGoal g)
     {
         selectedGoalForLog = g;
+        showHistoryModal = true;
+    }
+
+    private void OpenNewDailyLogModal(SavingsGoal g)
+    {
+        selectedGoalForLog = g;
+        editingLogId = null;
         newLogDayNumber = g.DailyLogs.Any() ? g.DailyLogs.Max(d => d.DayNumber) + 1 : 1;
+        newLogDate = DateTime.Today;
         newLogNotes = "";
+        showDailyLogModal = true;
+    }
+
+    private void OpenEditDailyLogModal(ProjectDailyLog log)
+    {
+        editingLogId = log.Id;
+        newLogDayNumber = log.DayNumber;
+        newLogDate = log.LogDate;
+        newLogNotes = log.Notes;
         showDailyLogModal = true;
     }
 
@@ -494,17 +574,52 @@
         if (selectedGoalForLog == null || string.IsNullOrWhiteSpace(newLogNotes)) return;
 
         using var db = await DbFactory.CreateDbContextAsync();
-        db.ProjectDailyLogs.Add(new ProjectDailyLog
+
+        if (editingLogId.HasValue)
         {
-            SavingsGoalId = selectedGoalForLog.Id,
-            DayNumber = newLogDayNumber,
-            LogDate = DateTime.Today,
-            Notes = newLogNotes
-        });
-        await db.SaveChangesAsync();
+            var match = await db.ProjectDailyLogs.FindAsync(editingLogId.Value);
+            if (match != null)
+            {
+                match.DayNumber = newLogDayNumber;
+                match.LogDate = newLogDate;
+                match.Notes = newLogNotes;
+                await db.SaveChangesAsync();
+            }
+        }
+        else
+        {
+            db.ProjectDailyLogs.Add(new ProjectDailyLog
+            {
+                SavingsGoalId = selectedGoalForLog.Id,
+                DayNumber = newLogDayNumber,
+                LogDate = newLogDate,
+                Notes = newLogNotes
+            });
+            await db.SaveChangesAsync();
+        }
 
         showDailyLogModal = false;
         await LoadGoalsAsync();
+
+        // Refresh selected goal reference for the history modal view
+        selectedGoalForLog = activeGoals.FirstOrDefault(g => g.Id == selectedGoalForLog.Id);
+    }
+
+    private async Task DeleteDailyLog(int logId)
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        var match = await db.ProjectDailyLogs.FindAsync(logId);
+        if (match != null)
+        {
+            db.ProjectDailyLogs.Remove(match);
+            await db.SaveChangesAsync();
+        }
+
+        await LoadGoalsAsync();
+        if (selectedGoalForLog != null)
+        {
+            selectedGoalForLog = activeGoals.FirstOrDefault(g => g.Id == selectedGoalForLog.Id);
+        }
     }
 
     private async Task ExtendDeadline(SavingsGoal g, int days)
@@ -562,7 +677,6 @@
                 match.ProjectProgressPercentage = Math.Clamp(goalModel.ProjectProgressPercentage, 0, 100);
                 match.DeliverableNotes = goalModel.DeliverableNotes;
                 match.TargetDate = goalModel.TargetDate;
-                match.ReminderAlertEnabled = goalModel.ReminderAlertEnabled;
                 await db.SaveChangesAsync();
             }
         }
@@ -652,8 +766,8 @@
             var g2 = new SavingsGoal { Title = "CPEN 302 Lab Assignment 2 (Blazor Circuit)", GoalType = "AcademicAssignment", AssociatedCourse = "CPEN 302", ProjectProgressPercentage = 50, TargetDate = DateTime.Today.AddDays(4), DeliverableNotes = "SignalR and SQLite concurrency implementation" };
             var g3 = new SavingsGoal { Title = "UAV Spectrum Monitor Hardware Enclosure", GoalType = "PersonalProject", ProjectProgressPercentage = 75, TargetDate = DateTime.Today.AddDays(10), DeliverableNotes = "Complete 3D print file & solder RF receiver breakout" };
             
-            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 1, Notes = "Drafted schematic and selected RF breakout." });
-            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 2, Notes = "Soldered headers and started 3D enclosure CAD." });
+            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 1, LogDate = DateTime.Today.AddDays(-2), Notes = "Selected RF receiver breakout and verified pinouts." });
+            g3.DailyLogs.Add(new ProjectDailyLog { DayNumber = 2, LogDate = DateTime.Today.AddDays(-1), Notes = "Soldered headers and started 3D enclosure CAD model in Fusion 360." });
 
             db.SavingsGoals.AddRange(g1, g2, g3);
             await db.SaveChangesAsync();

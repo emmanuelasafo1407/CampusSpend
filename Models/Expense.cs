@@ -37,7 +37,23 @@ public class BudgetSetting
     [Range(1.00, 1000000.00)]
     public decimal TargetAmount { get; set; } = 800.00m;
 
+    // Configurable Target Daily Burn
+    [Range(1.00, 5000.00)]
+    public decimal CustomDailyTarget { get; set; } = 25.00m;
+
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
+
+    // Feature 1: Automated & Manual Exam Lockout Date Range
+    public bool IsExamLockoutActive { get; set; } = false;
+    public DateTime? ExamLockoutStartDate { get; set; } = DateTime.Today;
+    public DateTime? ExamLockoutEndDate { get; set; } = DateTime.Today.AddDays(14);
+
+    // Auto-evaluates if today is strictly within the active exam window
+    public bool IsCurrentlyInExamWindow =>
+        IsExamLockoutActive || 
+        (ExamLockoutStartDate.HasValue && ExamLockoutEndDate.HasValue &&
+         DateTime.Today >= ExamLockoutStartDate.Value.Date && 
+         DateTime.Today <= ExamLockoutEndDate.Value.Date);
 }
 
 public class ProjectDailyLog

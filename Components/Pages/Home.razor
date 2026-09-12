@@ -13,21 +13,46 @@
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="fw-bold text-dark mb-0">Financial Overview</h2>
-            <small class="text-muted">Welcome back! Here is your current academic financial health.</small>
+            <h2 class="fw-bold text-dark mb-0">Financial Overview & Academic Runway</h2>
+            <small class="text-muted">Real-time financial pacing, custom daily limits & automated exam lockout.</small>
         </div>
-        <div class="d-flex gap-2 mt-2 mt-md-0">
+        <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
+            <button class="btn @(activeBudget.IsCurrentlyInExamWindow ? "btn-danger" : "btn-outline-danger") btn-sm shadow-sm fw-semibold" @onclick="() => showLockoutModal = true">
+                <i class="bi @(activeBudget.IsCurrentlyInExamWindow ? "bi-shield-lock-fill" : "bi-shield-lock") me-1"></i>
+                @(activeBudget.IsCurrentlyInExamWindow ? "Exam Lockout CONFIGURED (ACTIVE)" : "Configure Exam Lockout")
+            </button>
             <button class="btn btn-primary btn-sm shadow-sm" @onclick='() => Nav.NavigateTo("transactions")'>
                 <i class="bi bi-plus-lg me-1"></i> Log Expense
             </button>
             <button class="btn btn-outline-secondary btn-sm shadow-sm" @onclick="() => showBudgetModal = true">
-                <i class="bi bi-sliders me-1"></i> Set Budget
+                <i class="bi bi-sliders me-1"></i> Set Budget & Daily Burn
             </button>
         </div>
     </div>
 
+    <!-- Active Lockout Banner -->
+    @if (activeBudget.IsCurrentlyInExamWindow)
+    {
+        <div class="card border-0 bg-danger text-white p-3 mb-4 shadow-sm rounded-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-lock-fill fs-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-0">Exam Mode Financial Lockout is Active</h6>
+                        <small class="opacity-90">
+                            Window: <strong>@(activeBudget.ExamLockoutStartDate?.ToString("dd MMM yyyy") ?? "Now")</strong> to <strong>@(activeBudget.ExamLockoutEndDate?.ToString("dd MMM yyyy") ?? "End of Exams")</strong>. Non-essential 'Lifestyle' spending is strictly blocked.
+                        </small>
+                    </div>
+                </div>
+                <button class="btn btn-light btn-sm text-danger fw-bold shadow-sm" @onclick="QuickToggleLockout">
+                    @(activeBudget.IsExamLockoutActive ? "Disengage Lockout" : "Override Window")
+                </button>
+            </div>
+        </div>
+    }
+
     <!-- Budget Status Banner -->
-    <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white">
+    <div class="card stat-card shadow-sm border-0 mb-3 p-4 bg-white">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div>
                 <span class="badge bg-primary me-2 px-3 py-1">@activeBudget.PeriodType Limit</span>
@@ -40,6 +65,34 @@
         <div class="progress rounded-pill" style="height: 12px;">
             <div class="progress-bar rounded-pill @(BudgetUsagePercent >= 90 ? "bg-danger" : BudgetUsagePercent >= 70 ? "bg-warning" : "bg-success")"
                  style="width: @(Math.Min(BudgetUsagePercent, 100))%"></div>
+        </div>
+    </div>
+
+    <!-- Student Cash Runway vs Exam Survivability Banner -->
+    <div class="card stat-card shadow-sm border-0 mb-4 p-3 bg-white border-start border-4 @(IsRunwayCriticallyLow ? "border-danger bg-danger-subtle bg-opacity-10" : "border-success")">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge @(IsRunwayCriticallyLow ? "bg-danger text-white" : "bg-success text-white") px-2 py-1">
+                        <i class="bi bi-fuel-pump me-1"></i> @(IsRunwayCriticallyLow ? "High Burn Hazard" : "Healthy Capital Runway")
+                    </span>
+                    <span class="text-muted small">Daily Outflow Pacing Target: <strong>GHS @activeBudget.CustomDailyTarget.ToString("F2") / day</strong></span>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">
+                    Runway Forecast: ~@(EstimatedRunwayDays >= 999 ? "∞" : EstimatedRunwayDays.ToString("F0")) Days of Cash Remaining
+                </h5>
+                <p class="small text-muted mb-0">
+                    @RunwayExamStatusDescription
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <div class="d-inline-block text-center p-2 px-3 bg-light rounded-3 border">
+                    <small class="text-muted text-uppercase d-block" style="font-size: 0.7rem;">Uncommitted Balance</small>
+                    <span class="fs-5 fw-bold @(RemainingBudgetCap <= 50 ? "text-danger" : "text-success")">
+                        GHS @RemainingBudgetCap.ToString("N2")
+                    </span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -72,7 +125,7 @@
                 <div class="fs-5 fw-bold @(IsSpendingTrendingUp ? "text-danger" : "text-success") mt-1">
                     @(IsSpendingTrendingUp ? "↑ Surge (High Outflow)" : "↓ Stable (Controlled)")
                 </div>
-                <small class="text-muted">@(IsSpendingTrendingUp ? "Exceeding normal pacing" : "Healthy weekly burn rate")</small>
+                <small class="text-muted">@(IsSpendingTrendingUp ? "Exceeding daily target" : "Within daily target bounds")</small>
             </div>
         </div>
     </div>
@@ -115,7 +168,7 @@
             </div>
         </div>
 
-        <!-- Active Targets & Milestones Preview (Polymorphic Track Rendering) -->
+        <!-- Active Targets & Milestones Preview -->
         <div class="col-lg-5">
             <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -167,19 +220,19 @@
     </div>
 </div>
 
-<!-- Modal: Configure Budget -->
+<!-- Modal 1: Configure Budget & Custom Daily Target -->
 @if (showBudgetModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Set Spending Budget</h5>
+                    <h5 class="modal-title fw-bold">Set Budget & Daily Burn Target</h5>
                     <button type="button" class="btn-close" @onclick="() => showBudgetModal = false"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Period Horizon:</label>
+                        <label class="form-label small fw-semibold">Period Horizon:</label>
                         <select class="form-select" @bind="activeBudget.PeriodType">
                             <option value="Daily">Daily</option>
                             <option value="Weekly">Weekly</option>
@@ -188,13 +241,60 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Spending Cap (GHS):</label>
+                        <label class="form-label small fw-semibold">Spending Cap (GHS):</label>
                         <input type="number" class="form-control" @bind="activeBudget.TargetAmount" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Your Target Daily Spend (GHS / Day):</label>
+                        <input type="number" class="form-control" @bind="activeBudget.CustomDailyTarget" min="1" step="1" />
+                        <small class="text-muted">The app uses this to calculate your exact financial runway and exam survivability.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="() => showBudgetModal = false">Cancel</button>
-                    <button class="btn btn-primary" @onclick="SaveBudget">Update Budget</button>
+                    <button class="btn btn-primary" @onclick="SaveBudget">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal 2: Configure Exam Lockout Window -->
+@if (showLockoutModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-3">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-shield-lock-fill me-2"></i>Exam Mode Financial Lockout</h5>
+                    <button type="button" class="btn-close" @onclick="() => showLockoutModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-muted mb-3">
+                        Set your official examination dates. During this window, non-essential outflows (Lifestyle, recreation) are <strong>strictly blocked</strong> to ensure you never run out of money for academic emergencies.
+                    </p>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Exam Start Date:</label>
+                            <input type="date" class="form-control" @bind="activeBudget.ExamLockoutStartDate" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Exam End Date:</label>
+                            <input type="date" class="form-control" @bind="activeBudget.ExamLockoutEndDate" />
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="lockoutForce" @bind="activeBudget.IsExamLockoutActive" />
+                        <label class="form-check-label small fw-semibold" for="lockoutForce">
+                            Force Lockout Immediately (regardless of date)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => showLockoutModal = false">Cancel</button>
+                    <button class="btn btn-danger btn-sm" @onclick="SaveLockoutSettings">Save Lockout Dates</button>
                 </div>
             </div>
         </div>
@@ -204,8 +304,10 @@
 @code {
     private List<Expense> allExpenses = new();
     private List<SavingsGoal> activeGoals = new();
+    private List<SemesterCourse> allCourses = new();
     private BudgetSetting activeBudget = new();
     private bool showBudgetModal = false;
+    private bool showLockoutModal = false;
 
     private decimal TotalSpent => allExpenses.Sum(e => e.Amount);
     private decimal CategorySpent(string cat) => allExpenses.Where(e => e.Category == cat).Sum(e => e.Amount);
@@ -225,6 +327,48 @@
         }
     }
 
+    private decimal RemainingBudgetCap => Math.Max(0, activeBudget.TargetAmount - CurrentPeriodSpent);
+
+    // Uses the user's configured daily target (e.g. 25 GHS) or calculated 7-day burn if higher
+    private decimal EffectiveDailyBurn
+    {
+        get
+        {
+            var past7DaysSpent = allExpenses.Where(e => e.DateIncurred >= DateTime.Today.AddDays(-7)).Sum(e => e.Amount);
+            var realBurn = past7DaysSpent > 0 ? past7DaysSpent / 7m : 0;
+            return Math.Max(activeBudget.CustomDailyTarget, realBurn);
+        }
+    }
+
+    private double EstimatedRunwayDays =>
+        EffectiveDailyBurn > 0 ? (double)(RemainingBudgetCap / EffectiveDailyBurn) : 999.0;
+
+    private DateTime? FinalExamDate =>
+        activeBudget.ExamLockoutEndDate ?? allCourses.Where(c => c.ExamDate.HasValue).Max(c => c.ExamDate);
+
+    private int DaysUntilLastExam =>
+        FinalExamDate.HasValue ? Math.Max(0, (FinalExamDate.Value.Date - DateTime.Today).Days) : 0;
+
+    private bool IsRunwayCriticallyLow =>
+        FinalExamDate.HasValue && EstimatedRunwayDays < DaysUntilLastExam;
+
+    private string RunwayExamStatusDescription
+    {
+        get
+        {
+            if (!FinalExamDate.HasValue)
+                return $"At your configured daily target of GHS {EffectiveDailyBurn:F1}/day, your funds will last approx {EstimatedRunwayDays:F0} days.";
+
+            if (EstimatedRunwayDays < DaysUntilLastExam)
+            {
+                var deficitDays = DaysUntilLastExam - (int)EstimatedRunwayDays;
+                return $"⚠️ Caution: Funds will expire ~{deficitDays} days before exams conclude on {FinalExamDate.Value:dd MMM yyyy}.";
+            }
+
+            return $"✅ Strong coverage: Your funds comfortably survive past your final exam on {FinalExamDate.Value:dd MMM yyyy}.";
+        }
+    }
+
     private decimal BudgetUsagePercent => activeBudget.TargetAmount > 0 
         ? (CurrentPeriodSpent / activeBudget.TargetAmount) * 100 
         : 0;
@@ -241,9 +385,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
         using var db = await DbFactory.CreateDbContextAsync();
         allExpenses = await db.Expenses.OrderByDescending(e => e.DateIncurred).ToListAsync();
         activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
+        allCourses = await db.SemesterCourses.ToListAsync();
         activeBudget = await db.BudgetSettings.FirstOrDefaultAsync() ?? new BudgetSetting();
     }
 
@@ -254,5 +404,23 @@
         db.BudgetSettings.Update(activeBudget);
         await db.SaveChangesAsync();
         showBudgetModal = false;
+    }
+
+    private async Task SaveLockoutSettings()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        activeBudget.UpdatedAt = DateTime.Now;
+        db.BudgetSettings.Update(activeBudget);
+        await db.SaveChangesAsync();
+        showLockoutModal = false;
+    }
+
+    private async Task QuickToggleLockout()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        activeBudget.IsExamLockoutActive = !activeBudget.IsExamLockoutActive;
+        activeBudget.UpdatedAt = DateTime.Now;
+        db.BudgetSettings.Update(activeBudget);
+        await db.SaveChangesAsync();
     }
 }

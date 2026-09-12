@@ -16,7 +16,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 mt-3">
         <div>
             <h2 class="fw-bold text-dark mb-0">StudySprint Academic Command</h2>
-            <small class="text-muted">Monday–Sunday structured study routine, break intervals, syllabus mastery & focus reminders.</small>
+            <small class="text-muted">Monday–Sunday structured routine, full course titles, recovery intervals, focus audio & periodic reminders.</small>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
             <button class="btn btn-outline-primary btn-sm shadow-sm" @onclick="() => showFreeHoursModal = true">
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <!-- Active Single-Course Focus Timer Banner -->
+    <!-- Active Single-Course Focus Timer Banner with Native Web Audio Ambience -->
     <div class="card stat-card shadow-sm border-0 mb-4 p-3 bg-white">
         <div class="row align-items-center">
             <div class="col-md-5 d-flex align-items-center gap-3">
@@ -64,6 +64,25 @@
                 </div>
             </div>
             <div class="col-md-7 text-md-end mt-3 mt-md-0">
+                <!-- Synthesized Ambient Noise Controller -->
+                <div class="btn-group btn-group-sm me-2 shadow-sm">
+                    <button class="btn @(isAmbiencePlaying ? "btn-dark text-warning" : "btn-outline-secondary")" @onclick="ToggleAmbience">
+                        <i class="bi @(isAmbiencePlaying ? "bi-volume-up-fill" : "bi-headphones") me-1"></i>
+                        @(isAmbiencePlaying ? $"{activeAmbienceType.ToUpper()} Sound Active" : "Focus Ambience")
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="visually-hidden">Toggle Ambience</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 small">
+                        <li><h6 class="dropdown-header">Synthesized Noise</h6></li>
+                        <li><button class="dropdown-item" @onclick='() => ChangeAmbience("brown")'>🪵 Deep Brown Noise (Heavy Focus)</button></li>
+                        <li><button class="dropdown-item" @onclick='() => ChangeAmbience("pink")'>🌧️ Gentle Rain Waves</button></li>
+                        <li><button class="dropdown-item" @onclick='() => ChangeAmbience("library")'>📚 Silent Library Ambience</button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item text-danger" @onclick="StopAmbience">⏹ Mute Ambience</button></li>
+                    </ul>
+                </div>
+
                 @if (ActiveCourseSession != null)
                 {
                     @if (!isTimerRunning)
@@ -87,7 +106,7 @@
                 }
                 else
                 {
-                    <span class="text-muted small">Select "+ Start Slide" on any course to begin your study block.</span>
+                    <span class="text-muted small">Select "+ Start Slide" on any registered course to begin.</span>
                 }
             </div>
         </div>
@@ -140,8 +159,8 @@
                 </div>
                 <small class="text-muted">
                     @(isExamRevisionMode 
-                        ? "Prioritizes upcoming exam dates, course difficulty and lowest grasp topics with study sessions and breaks." 
-                        : "Schedules sessions across Monday to Sunday directly aligned with class lecture days (previews, reviews, and recovery breaks).")
+                        ? "Prioritizes upcoming exam dates, course difficulty, and lowest grasp topics with study sessions and scheduled breaks." 
+                        : "Schedules sessions across Monday to Sunday aligned with class lecture days (previews, reviews, and recovery breaks).")
                 </small>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
@@ -160,7 +179,7 @@
         @if (scheduleSlots.Count == 0)
         {
             <div class="p-4 text-center border rounded bg-light text-muted small">
-                No timetable generated yet. Click <strong>"Generate Weekly Routine"</strong> to automatically map Monday to Sunday study blocks with rest breaks based on your class timetable.
+                No timetable generated yet. Click <strong>"Generate Weekly Routine"</strong> to automatically map Monday to Sunday study blocks with recovery breaks based on your class timetable.
             </div>
         }
         else
@@ -437,7 +456,7 @@
                     <button type="button" class="btn-close" @onclick="() => showExamDatesModal = false"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="small text-muted mb-3">Confirm exam dates for your courses. StudySprint will generate an intensive revision plan from Monday to Sunday, allocating extra sessions and breaks to Hard courses and low-grasp topics.</p>
+                    <p class="small text-muted mb-3">Confirm exam dates for your courses. StudySprint will generate an intensive revision plan from Monday to Sunday, allocating extra sessions and recovery breaks to Hard courses and low-grasp topics.</p>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle">
                             <thead class="table-light small">
@@ -676,6 +695,10 @@
     private bool showExamDatesModal = false;
     private bool isExamRevisionMode = false;
 
+    // Ambient Noise Focus Audio State
+    private bool isAmbiencePlaying = false;
+    private string activeAmbienceType = "brown";
+
     // Single Focus State
     private SemesterCourse? ActiveCourseSession => courses.FirstOrDefault(c => c.ActiveSlideUnderway.HasValue);
     private SemesterCourse? selectedCourseToStart = null;
@@ -761,7 +784,7 @@
         await LoadAcademicDataAsync();
     }
 
-    // Helper: Parses a user time window like "18:30 - 21:30" into 2 structured study sessions with a 15 min break
+    // Splits a configured window (e.g. "18:30 - 21:30") into two study intervals with a 15-minute scheduled recovery break
     private (string session1, string session2) SplitWindowIntoSessions(string timeRange)
     {
         try
@@ -776,7 +799,7 @@
                 {
                     var studyBlockDuration = Math.Floor((totalMinutes - 15) / 2);
                     var s1End = start.Add(TimeSpan.FromMinutes(studyBlockDuration));
-                    var s2Start = s1End.Add(TimeSpan.FromMinutes(15)); // 15-min break
+                    var s2Start = s1End.Add(TimeSpan.FromMinutes(15)); // 15-min recovery break
 
                     string s1 = $"{start:hh\\:mm} - {s1End:hh\\:mm}";
                     string s2 = $"{s2Start:hh\\:mm} - {end:hh\\:mm}";
@@ -786,8 +809,7 @@
         }
         catch { }
 
-        // Fallback default sessions
-        return ("Session 1 (Early Window)", "Session 2 (Late Window)");
+        return ("Session 1", "Session 2");
     }
 
     // MODE 1: Semester Study Schedule (Monday to Sunday Routine Aligned to Lecture Days)
@@ -801,7 +823,6 @@
         var availableWindows = freeWindows.Where(w => w.IsAvailable).ToList();
         if (!availableWindows.Any()) return;
 
-        // For each day from Monday to Sunday, find the most relevant courses
         foreach (var day in WeekDayOrder)
         {
             var window = availableWindows.FirstOrDefault(w => w.DayOfWeek == day);
@@ -811,13 +832,13 @@
             string tomorrow = WeekDayOrder[(dayIndex + 1) % WeekDayOrder.Length];
             string yesterday = WeekDayOrder[(dayIndex - 1 + WeekDayOrder.Length) % WeekDayOrder.Length];
 
-            // 1. Course with class today (needs post-lecture consolidation)
+            // 1. Course with class today (post-lecture review)
             var courseToday = courses.FirstOrDefault(c => c.ClassDay == day);
 
-            // 2. Course with class tomorrow (needs pre-lecture preview)
+            // 2. Course with class tomorrow (pre-lecture preview)
             var courseTomorrow = courses.FirstOrDefault(c => c.ClassDay == tomorrow);
 
-            // 3. Fallback: Course with class yesterday (review) or hard courses
+            // 3. Fallback: Course with class yesterday or difficult courses
             var courseYesterday = courses.FirstOrDefault(c => c.ClassDay == yesterday)
                                   ?? courses.OrderByDescending(c => c.Difficulty == "Hard" ? 2 : 1).FirstOrDefault();
 
@@ -840,7 +861,7 @@
                 IsCompleted = false
             });
 
-            // Allocate Session 2 (Different course to diversify study routine)
+            // Allocate Session 2
             var secondaryCourse = (courseTomorrow != null && courseTomorrow.Code != primaryCourse.Code) 
                 ? courseTomorrow 
                 : (courseYesterday != null && courseYesterday.Code != primaryCourse.Code) 
@@ -871,12 +892,12 @@
         try
         {
             await JS.InvokeVoidAsync("playStudyChime");
-            await JS.InvokeVoidAsync("triggerStudyAlert", "Weekly Routine Active!", "Structured Monday to Sunday timetable generated with breaks.");
+            await JS.InvokeVoidAsync("triggerStudyAlert", "Weekly Routine Active!", "Structured Monday to Sunday timetable generated with recovery breaks.");
         }
         catch { }
     }
 
-    // MODE 2: Exam Revision Mode (Prioritizing Closest Exams, Difficulty, and Low Grasp)
+    // MODE 2: Exam Revision Mode (Prioritizing Closest Exams, Course Difficulty, and Low Grasp)
     private async Task GenerateExamRevisionSchedule()
     {
         using var db = await DbFactory.CreateDbContextAsync();
@@ -896,7 +917,6 @@
         var availableWindows = freeWindows.Where(w => w.IsAvailable).ToList();
         if (!availableWindows.Any()) return;
 
-        // Sort by closest exam date first, then highest difficulty ("Hard" first), then lowest understanding %
         var prioritizedCourses = courses
             .OrderBy(c => c.ExamDate ?? DateTime.MaxValue)
             .ThenByDescending(c => c.Difficulty == "Hard" ? 3 : c.Difficulty == "Medium" ? 2 : 1)
@@ -913,7 +933,6 @@
 
             var (session1Time, session2Time) = SplitWindowIntoSessions(window.TimeRange);
 
-            // Primary revision course
             var c1 = prioritizedCourses[coursePointer % prioritizedCourses.Count];
             var daysRemaining1 = (c1.ExamDate?.Date - DateTime.Today)?.Days ?? 14;
             var slidesLeft1 = Math.Max(1, c1.TotalSlides - c1.CoveredSlides);
@@ -929,7 +948,6 @@
                 IsCompleted = false
             });
 
-            // Secondary revision course (hardest or next urgent)
             coursePointer++;
             var c2 = prioritizedCourses[coursePointer % prioritizedCourses.Count];
             var daysRemaining2 = (c2.ExamDate?.Date - DateTime.Today)?.Days ?? 14;
@@ -978,6 +996,40 @@
         db.StudyScheduleSlots.RemoveRange(db.StudyScheduleSlots);
         await db.SaveChangesAsync();
         await LoadAcademicDataAsync();
+    }
+
+    // Audio Ambience Controller
+    private async Task ToggleAmbience()
+    {
+        if (isAmbiencePlaying)
+        {
+            await StopAmbience();
+        }
+        else
+        {
+            await ChangeAmbience(activeAmbienceType);
+        }
+    }
+
+    private async Task ChangeAmbience(string type)
+    {
+        activeAmbienceType = type;
+        isAmbiencePlaying = true;
+        try
+        {
+            await JS.InvokeVoidAsync("playAmbientSound", type);
+        }
+        catch { }
+    }
+
+    private async Task StopAmbience()
+    {
+        isAmbiencePlaying = false;
+        try
+        {
+            await JS.InvokeVoidAsync("stopAmbientSound");
+        }
+        catch { }
     }
 
     // Slide Focus Session & Automatic 10-Minute Reminder Engine
@@ -1058,7 +1110,6 @@
             }
             else
             {
-                // Final completion alert
                 isTimerRunning = false;
                 focusTicker?.Dispose();
                 await InvokeAsync(async () =>
@@ -1261,5 +1312,6 @@
     public void Dispose()
     {
         focusTicker?.Dispose();
+        _ = StopAmbience();
     }
 }
