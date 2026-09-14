@@ -4,11 +4,214 @@
 @using CampusSpend.Models
 @using CampusSpend.Data
 @using Microsoft.EntityFrameworkCore
+@implements IDisposable
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>Dashboard — CampusSpend</PageTitle>
 
+@if (showSplashScreen)
+{
+    <!-- ================= MODERN ULTRA-SLEEK GLASS SPLASH SCREEN ================= -->
+    <div class="splash-backdrop d-flex align-items-center justify-content-center min-vh-100 position-fixed top-0 start-0 w-100" style="z-index: 99999;">
+        <div class="glow-orb glow-top-left"></div>
+        <div class="glow-orb glow-bottom-right"></div>
+
+        <div class="splash-card text-center position-relative">
+            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-4 glass-badge">
+                <span class="live-dot"></span>
+                <span class="small text-light fw-medium tracking-wide">STUDENT OPERATING SYSTEM v2.4</span>
+            </div>
+
+            <div class="mx-auto mb-3 brand-icon-container">
+                <div class="brand-icon-inner shadow-lg">
+                    <i class="bi bi-wallet2 text-white fs-1"></i>
+                </div>
+            </div>
+
+            <h1 class="splash-title mb-2">
+                <span class="text-white fw-bold">CampusSpend</span>
+                <span class="brand-divider">/</span>
+                <span class="text-gradient fw-light">StudySprint</span>
+            </h1>
+
+            <p class="splash-subtitle mb-4">
+                Unified Student Capital Pacing & Course Routine Engine
+            </p>
+
+            <div class="d-flex flex-wrap justify-content-center gap-2 mb-4 feature-pills">
+                <div class="pill-item">
+                    <i class="bi bi-fuel-pump-fill text-warning me-1"></i> Cash Runway Forecaster
+                </div>
+                <div class="pill-item">
+                    <i class="bi bi-shield-lock-fill text-danger me-1"></i> Exam Financial Lockout
+                </div>
+                <div class="pill-item">
+                    <i class="bi bi-calendar2-week-fill text-info me-1"></i> Mon–Sun Lecture Routine
+                </div>
+            </div>
+
+            <div class="progress-wrap mx-auto mb-2">
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: @(splashProgressPercentage)%;"></div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center text-muted small px-1 mb-4" style="font-size: 0.75rem;">
+                <span class="text-secondary"><i class="bi bi-check2-circle text-success me-1"></i>Encrypted Local Engine</span>
+                <span class="text-info fw-semibold font-monospace">Launching in @(splashSecondsLeft)s</span>
+            </div>
+
+            <div>
+                <button class="btn btn-skip shadow-none" @onclick="DismissSplash">
+                    Skip Launch <i class="bi bi-arrow-right ms-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .splash-backdrop {
+        background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 100%);
+        overflow: hidden;
+    }
+
+    .glow-orb {
+        position: absolute;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        filter: blur(100px);
+        opacity: 0.25;
+        pointer-events: none;
+    }
+    .glow-top-left {
+        top: -60px;
+        left: -60px;
+        background: #3b82f6;
+    }
+    .glow-bottom-right {
+        bottom: -60px;
+        right: -60px;
+        background: #06b6d4;
+    }
+
+    .splash-card {
+        width: 90%;
+        max-width: 520px;
+        background: rgba(17, 24, 39, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-radius: 20px;
+        padding: 36px 32px 28px 32px;
+        animation: scaleUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @@keyframes scaleUp {
+        0% { transform: translateY(16px) scale(0.96); opacity: 0; }
+        100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .live-dot {
+        width: 6px;
+        height: 6px;
+        background-color: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #10b981;
+    }
+
+    .glass-badge {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        letter-spacing: 0.08em;
+        font-size: 0.68rem;
+    }
+
+    .brand-icon-container {
+        width: 72px;
+        height: 72px;
+    }
+    .brand-icon-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #2563eb, #06b6d4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .splash-title {
+        font-size: 2.1rem;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+    }
+    .brand-divider {
+        color: rgba(255, 255, 255, 0.2);
+        margin: 0 6px;
+        font-weight: 300;
+    }
+    .text-gradient {
+        background: linear-gradient(135deg, #60a5fa, #38bdf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .splash-subtitle {
+        color: #9ca3af;
+        font-size: 0.88rem;
+        letter-spacing: 0.01em;
+    }
+
+    .pill-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 9999px;
+        padding: 5px 12px;
+        font-size: 0.72rem;
+        color: #d1d5db;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .progress-wrap {
+        width: 100%;
+    }
+    .progress-track {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 9999px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #38bdf8);
+        border-radius: 9999px;
+        transition: width 0.3s ease-out;
+    }
+
+    .btn-skip {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #9ca3af;
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 5px 18px;
+        border-radius: 9999px;
+        transition: all 0.2s ease;
+    }
+    .btn-skip:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.25);
+    }
+</style>
+
+<!-- ================= MAIN DASHBOARD CONTAINER ================= -->
 <div class="container-fluid px-4 py-4 min-vh-100 bg-light">
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
@@ -17,7 +220,7 @@
             <small class="text-muted">Real-time financial pacing, custom daily limits & automated exam lockout.</small>
         </div>
         <div class="d-flex flex-wrap gap-2 mt-2 mt-md-0">
-            <button class="btn @(activeBudget.IsCurrentlyInExamWindow ? "btn-danger" : "btn-outline-danger") btn-sm shadow-sm fw-semibold" @onclick="() => showLockoutModal = true">
+            <button class="btn @(activeBudget.IsCurrentlyInExamWindow ? "btn-danger" : "btn-outline-danger") btn-sm shadow-sm fw-semibold" @onclick="OpenLockoutModal">
                 <i class="bi @(activeBudget.IsCurrentlyInExamWindow ? "bi-shield-lock-fill" : "bi-shield-lock") me-1"></i>
                 @(activeBudget.IsCurrentlyInExamWindow ? "Exam Lockout CONFIGURED (ACTIVE)" : "Configure Exam Lockout")
             </button>
@@ -56,7 +259,7 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div>
                 <span class="badge bg-primary me-2 px-3 py-1">@activeBudget.PeriodType Limit</span>
-                <span class="fw-bold fs-6">GHS @CurrentPeriodSpent.ToString("N2") spent of GHS @activeBudget.TargetAmount.ToString("N2") cap</span>
+                <span class="fw-bold fs-6">@Cur @CurrentPeriodSpent.ToString("N2") spent of @Cur @activeBudget.TargetAmount.ToString("N2") cap</span>
             </div>
             <span class="fw-bold @(BudgetUsagePercent >= 90 ? "text-danger" : BudgetUsagePercent >= 70 ? "text-warning" : "text-success")">
                 @BudgetUsagePercent.ToString("F1")% Used
@@ -76,7 +279,7 @@
                     <span class="badge @(IsRunwayCriticallyLow ? "bg-danger text-white" : "bg-success text-white") px-2 py-1">
                         <i class="bi bi-fuel-pump me-1"></i> @(IsRunwayCriticallyLow ? "High Burn Hazard" : "Healthy Capital Runway")
                     </span>
-                    <span class="text-muted small">Daily Outflow Pacing Target: <strong>GHS @activeBudget.CustomDailyTarget.ToString("F2") / day</strong></span>
+                    <span class="text-muted small">Daily Outflow Pacing Target: <strong>@Cur @activeBudget.CustomDailyTarget.ToString("F2") / day</strong></span>
                 </div>
                 <h5 class="fw-bold text-dark mb-1">
                     Runway Forecast: ~@(EstimatedRunwayDays >= 999 ? "∞" : EstimatedRunwayDays.ToString("F0")) Days of Cash Remaining
@@ -89,7 +292,7 @@
                 <div class="d-inline-block text-center p-2 px-3 bg-light rounded-3 border">
                     <small class="text-muted text-uppercase d-block" style="font-size: 0.7rem;">Uncommitted Balance</small>
                     <span class="fs-5 fw-bold @(RemainingBudgetCap <= 50 ? "text-danger" : "text-success")">
-                        GHS @RemainingBudgetCap.ToString("N2")
+                        @Cur @RemainingBudgetCap.ToString("N2")
                     </span>
                 </div>
             </div>
@@ -101,21 +304,21 @@
         <div class="col-sm-6 col-xl-3">
             <div class="card stat-card shadow-sm border-0 border-start border-4 border-primary p-3 bg-white">
                 <small class="text-muted text-uppercase fw-semibold">All-Time Expenditure</small>
-                <div class="fs-4 fw-bold text-primary mt-1">GHS @TotalSpent.ToString("N2")</div>
+                <div class="fs-4 fw-bold text-primary mt-1">@Cur @TotalSpent.ToString("N2")</div>
                 <small class="text-muted">@allExpenses.Count Total entries</small>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card stat-card shadow-sm border-0 border-start border-4 border-success p-3 bg-white">
                 <small class="text-muted text-uppercase fw-semibold">Food & Living</small>
-                <div class="fs-4 fw-bold text-success mt-1">GHS @CategorySpent("Food").ToString("N2")</div>
+                <div class="fs-4 fw-bold text-success mt-1">@Cur @CategorySpent("Food").ToString("N2")</div>
                 <small class="text-muted">@(TotalSpent > 0 ? (CategorySpent("Food") / TotalSpent * 100).ToString("F0") : "0")% of student spending</small>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card stat-card shadow-sm border-0 border-start border-4 border-warning p-3 bg-white">
                 <small class="text-muted text-uppercase fw-semibold">Academics & Printing</small>
-                <div class="fs-4 fw-bold text-warning mt-1">GHS @CategorySpent("Academics").ToString("N2")</div>
+                <div class="fs-4 fw-bold text-warning mt-1">@Cur @CategorySpent("Academics").ToString("N2")</div>
                 <small class="text-muted">Handouts & lab supplies</small>
             </div>
         </div>
@@ -132,11 +335,10 @@
 
     <!-- Quick Preview Grid -->
     <div class="row g-4">
-        <!-- Recent Transactions Preview -->
         <div class="col-lg-7">
             <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0">Recent Transactions</h6>
+                    <h6 class="fw-bold mb-0 text-dark">Recent Transactions</h6>
                     <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("transactions")'>
                         View All Ledger →
                     </button>
@@ -158,7 +360,7 @@
                                             <small class="text-muted">@item.DateIncurred.ToString("dd MMM") · @item.PaymentMethod</small>
                                         </td>
                                         <td><span class="badge bg-light text-dark border">@item.Category</span></td>
-                                        <td class="text-end fw-bold text-dark">GHS @item.Amount.ToString("N2")</td>
+                                        <td class="text-end fw-bold text-dark">@Cur @item.Amount.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -168,11 +370,10 @@
             </div>
         </div>
 
-        <!-- Active Targets & Milestones Preview -->
         <div class="col-lg-5">
             <div class="card stat-card shadow-sm border-0 p-3 bg-white h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0">Active Targets & Milestones</h6>
+                    <h6 class="fw-bold mb-0 text-dark">Active Targets & Milestones</h6>
                     <button class="btn btn-link btn-sm text-primary p-0 text-decoration-none" @onclick='() => Nav.NavigateTo("goals")'>
                         Manage Goals →
                     </button>
@@ -195,12 +396,12 @@
                                     <span class="badge @(g.GoalType == "Financial" ? "bg-primary" : g.GoalType == "AcademicAssignment" ? "bg-warning text-dark" : "bg-info text-dark") me-1" style="font-size: 0.65rem;">
                                         @(g.GoalType == "Financial" ? "Finance" : g.GoalType == "AcademicAssignment" ? "Assignment" : "Project")
                                     </span>
-                                    <span>@g.Title</span>
+                                    <span class="text-dark">@g.Title</span>
                                 </div>
                                 <span class="text-muted">
                                     @if (g.GoalType == "Financial")
                                     {
-                                        <span>GHS @g.CurrentSaved.ToString("N0") / @g.TargetAmount.ToString("N0")</span>
+                                        <span>@Cur @g.CurrentSaved.ToString("N0") / @Cur @g.TargetAmount.ToString("N0")</span>
                                     }
                                     else
                                     {
@@ -220,19 +421,19 @@
     </div>
 </div>
 
-<!-- Modal 1: Configure Budget & Custom Daily Target -->
+<!-- Modal 1: Configure Budget -->
 @if (showBudgetModal)
 {
     <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold">Set Budget & Daily Burn Target</h5>
+                    <h5 class="modal-title fw-bold text-dark">Set Budget & Daily Burn Target</h5>
                     <button type="button" class="btn-close" @onclick="() => showBudgetModal = false"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold">Period Horizon:</label>
+                        <label class="form-label small fw-semibold text-secondary">Period Horizon:</label>
                         <select class="form-select" @bind="activeBudget.PeriodType">
                             <option value="Daily">Daily</option>
                             <option value="Weekly">Weekly</option>
@@ -241,13 +442,13 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold">Spending Cap (GHS):</label>
+                        <label class="form-label small fw-semibold text-secondary">Spending Cap (@Cur):</label>
                         <input type="number" class="form-control" @bind="activeBudget.TargetAmount" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold">Your Target Daily Spend (GHS / Day):</label>
+                        <label class="form-label small fw-semibold text-secondary">Your Target Daily Spend (@Cur / Day):</label>
                         <input type="number" class="form-control" @bind="activeBudget.CustomDailyTarget" min="1" step="1" />
-                        <small class="text-muted">The app uses this to calculate your exact financial runway and exam survivability.</small>
+                        <small class="text-muted">Calculates real-time financial runway and exam survivability.</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -266,35 +467,58 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-3">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-shield-lock-fill me-2"></i>Exam Mode Financial Lockout</h5>
-                    <button type="button" class="btn-close" @onclick="() => showLockoutModal = false"></button>
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="bi bi-shield-lock-fill me-2"></i>Exam Mode Financial Lockout
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseLockoutModal"></button>
                 </div>
                 <div class="modal-body">
                     <p class="small text-muted mb-3">
-                        Set your official examination dates. During this window, non-essential outflows (Lifestyle, recreation) are <strong>strictly blocked</strong> to ensure you never run out of money for academic emergencies.
+                        Set your examination dates. During this window, non-essential outflows are <strong>strictly blocked</strong> to protect your academic capital.
                     </p>
+
+                    @if (!string.IsNullOrEmpty(lockoutValidationError))
+                    {
+                        <div class="alert alert-danger py-2 small mb-3">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> @lockoutValidationError
+                        </div>
+                    }
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-semibold">Exam Start Date:</label>
-                            <input type="date" class="form-control" @bind="activeBudget.ExamLockoutStartDate" />
+                            <label class="form-label small fw-semibold text-secondary">Exam Start Date:</label>
+                            <input type="date" 
+                                   class="form-control @(hasDateMismatch ? "is-invalid" : "")" 
+                                   @bind="tempStartDate" 
+                                   @bind:after="OnStartDateChanged" />
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-semibold">Exam End Date:</label>
-                            <input type="date" class="form-control" @bind="activeBudget.ExamLockoutEndDate" />
+                            <label class="form-label small fw-semibold text-secondary">Exam End Date:</label>
+                            <input type="date" 
+                                   class="form-control @(hasDateMismatch ? "is-invalid" : "")" 
+                                   min="@(tempStartDate?.ToString("yyyy-MM-dd"))"
+                                   @bind="tempEndDate" 
+                                   @bind:after="ValidateDates" />
                         </div>
                     </div>
 
                     <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="lockoutForce" @bind="activeBudget.IsExamLockoutActive" />
-                        <label class="form-check-label small fw-semibold" for="lockoutForce">
-                            Force Lockout Immediately (regardless of date)
+                        <input class="form-check-input" type="checkbox" id="lockoutForce" @bind="tempIsLockoutActive" />
+                        <label class="form-check-label small fw-semibold text-secondary" for="lockoutForce">
+                            Force Lockout Immediately
                         </label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary btn-sm" @onclick="() => showLockoutModal = false">Cancel</button>
-                    <button class="btn btn-danger btn-sm" @onclick="SaveLockoutSettings">Save Lockout Dates</button>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="ClearLockout">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset to Normal
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary btn-sm" @onclick="CloseLockoutModal">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="SaveLockoutSettings" disabled="@hasDateMismatch">
+                            Save Lockout Dates
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -302,12 +526,29 @@
 }
 
 @code {
+    private static bool hasShownSplashOnce = false;
+    private bool showSplashScreen = !hasShownSplashOnce;
+
+    private int splashSecondsLeft = 7;
+    private System.Threading.Timer? splashTimer;
+    private double splashProgressPercentage => ((7 - splashSecondsLeft) / 7.0) * 100.0;
+
     private List<Expense> allExpenses = new();
     private List<SavingsGoal> activeGoals = new();
     private List<SemesterCourse> allCourses = new();
     private BudgetSetting activeBudget = new();
+    private SystemPreference systemPref = new();
+
+    private string Cur => string.IsNullOrWhiteSpace(systemPref.PreferredCurrency) ? "GHS" : systemPref.PreferredCurrency;
+
     private bool showBudgetModal = false;
     private bool showLockoutModal = false;
+
+    private DateTime? tempStartDate;
+    private DateTime? tempEndDate;
+    private bool tempIsLockoutActive;
+    private string lockoutValidationError = "";
+    private bool hasDateMismatch => tempStartDate.HasValue && tempEndDate.HasValue && tempStartDate > tempEndDate;
 
     private decimal TotalSpent => allExpenses.Sum(e => e.Amount);
     private decimal CategorySpent(string cat) => allExpenses.Where(e => e.Category == cat).Sum(e => e.Amount);
@@ -329,7 +570,6 @@
 
     private decimal RemainingBudgetCap => Math.Max(0, activeBudget.TargetAmount - CurrentPeriodSpent);
 
-    // Uses the user's configured daily target (e.g. 25 GHS) or calculated 7-day burn if higher
     private decimal EffectiveDailyBurn
     {
         get
@@ -357,7 +597,7 @@
         get
         {
             if (!FinalExamDate.HasValue)
-                return $"At your configured daily target of GHS {EffectiveDailyBurn:F1}/day, your funds will last approx {EstimatedRunwayDays:F0} days.";
+                return $"At your configured daily target of {Cur} {EffectiveDailyBurn:F1}/day, your funds will last approx {EstimatedRunwayDays:F0} days.";
 
             if (EstimatedRunwayDays < DaysUntilLastExam)
             {
@@ -386,6 +626,51 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDashboardData();
+
+        // If user disabled splash screen in Settings, skip it automatically
+        if (!systemPref.AutoPlaySplashScreen)
+        {
+            showSplashScreen = false;
+        }
+        else
+        {
+            StartSplashCountdown();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = systemPref.IsDarkMode ? "dark" : "light";
+            await JS.InvokeVoidAsync("eval", $"document.documentElement.setAttribute('data-bs-theme', '{theme}')");
+        }
+    }
+
+    private void StartSplashCountdown()
+    {
+        if (hasShownSplashOnce) return;
+
+        splashTimer = new System.Threading.Timer(async _ =>
+        {
+            if (splashSecondsLeft > 1)
+            {
+                splashSecondsLeft--;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                DismissSplash();
+            }
+        }, null, 1000, 1000);
+    }
+
+    private void DismissSplash()
+    {
+        hasShownSplashOnce = true;
+        splashTimer?.Dispose();
+        showSplashScreen = false;
+        InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadDashboardData()
@@ -395,6 +680,7 @@
         activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
         allCourses = await db.SemesterCourses.ToListAsync();
         activeBudget = await db.BudgetSettings.FirstOrDefaultAsync() ?? new BudgetSetting();
+        systemPref = await db.SystemPreferences.FirstOrDefaultAsync() ?? new SystemPreference();
     }
 
     private async Task SaveBudget()
@@ -406,10 +692,70 @@
         showBudgetModal = false;
     }
 
+    private void OpenLockoutModal()
+    {
+        tempStartDate = activeBudget.ExamLockoutStartDate;
+        tempEndDate = activeBudget.ExamLockoutEndDate;
+        tempIsLockoutActive = activeBudget.IsExamLockoutActive;
+        lockoutValidationError = "";
+        showLockoutModal = true;
+    }
+
+    private void CloseLockoutModal()
+    {
+        showLockoutModal = false;
+        lockoutValidationError = "";
+    }
+
+    private void OnStartDateChanged()
+    {
+        if (tempStartDate.HasValue && tempEndDate.HasValue && tempStartDate > tempEndDate)
+        {
+            tempEndDate = tempStartDate;
+        }
+        ValidateDates();
+    }
+
+    private void ValidateDates()
+    {
+        if (hasDateMismatch)
+        {
+            lockoutValidationError = "Exam Start Date cannot be after the End Date.";
+        }
+        else
+        {
+            lockoutValidationError = "";
+        }
+    }
+
     private async Task SaveLockoutSettings()
     {
+        ValidateDates();
+        if (hasDateMismatch) return;
+
         using var db = await DbFactory.CreateDbContextAsync();
+        activeBudget.ExamLockoutStartDate = tempStartDate;
+        activeBudget.ExamLockoutEndDate = tempEndDate;
+        activeBudget.IsExamLockoutActive = tempIsLockoutActive;
         activeBudget.UpdatedAt = DateTime.Now;
+
+        db.BudgetSettings.Update(activeBudget);
+        await db.SaveChangesAsync();
+        showLockoutModal = false;
+    }
+
+    private async Task ClearLockout()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        tempStartDate = null;
+        tempEndDate = null;
+        tempIsLockoutActive = false;
+
+        activeBudget.ExamLockoutStartDate = null;
+        activeBudget.ExamLockoutEndDate = null;
+        activeBudget.IsExamLockoutActive = false;
+        activeBudget.UpdatedAt = DateTime.Now;
+
         db.BudgetSettings.Update(activeBudget);
         await db.SaveChangesAsync();
         showLockoutModal = false;
@@ -422,5 +768,10 @@
         activeBudget.UpdatedAt = DateTime.Now;
         db.BudgetSettings.Update(activeBudget);
         await db.SaveChangesAsync();
+    }
+
+    public void Dispose()
+    {
+        splashTimer?.Dispose();
     }
 }

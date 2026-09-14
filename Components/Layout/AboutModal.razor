@@ -1,0 +1,146 @@
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 99999;" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                
+                <!-- Header Banner -->
+                <div class="modal-header bg-dark text-white border-bottom border-secondary border-opacity-25 px-4 py-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="p-2 rounded-3 bg-primary bg-gradient text-white">
+                            <i class="bi bi-wallet2 fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0">About CampusSpend & StudySprint</h5>
+                            <small class="text-light text-opacity-75">Student Financial Command & Academic Operations Engine</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" @onclick="Close"></button>
+                </div>
+
+                <!-- Modal Body: Scrollable Read-Along Content -->
+                <div class="modal-body p-4 bg-light" style="max-height: 72vh; overflow-y: auto;">
+                    
+                    <!-- Section 1: The Core Student Problem (Your Read-Along Script) -->
+                    <div class="card border-0 shadow-sm p-4 mb-3 bg-white border-start border-4 border-danger rounded-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-danger px-2 py-1">Problem Statement</span>
+                            <h6 class="fw-bold text-dark mb-0">Why CampusSpend Was Built</h6>
+                        </div>
+                        <p class="text-dark lh-base mb-2" style="font-size: 0.93rem;">
+                            University students face two major challenges every semester: managing a finite allowance so money doesn't run out before exams, and keeping up with lecture slides across multiple engineering courses.
+                        </p>
+                        <p class="text-muted lh-base mb-0" style="font-size: 0.88rem;">
+                            Instead of handling these problems separately, this system unifies daily spending velocity with syllabus progress into a single responsive command center. In typical student life, lump-sum allowances create an illusion of wealth in the early weeks. By mid-semester and examination week, students face severe financial deficits right when funds are required for slide printing, data bundles, and practical submissions.
+                        </p>
+                    </div>
+
+                    <!-- Section 2: Architectural Solutions -->
+                    <div class="card border-0 shadow-sm p-4 mb-3 bg-white border-start border-4 border-success rounded-3">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-success px-2 py-1">Solution Matrix</span>
+                            <h6 class="fw-bold text-dark mb-0">How The System Solves It</h6>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-3 border h-100">
+                                    <h6 class="fw-bold text-primary mb-1" style="font-size: 0.88rem;">
+                                        <i class="bi bi-fuel-pump me-1"></i> 1. Runway & Daily Burn Pacing
+                                    </h6>
+                                    <p class="text-muted mb-0 small" style="line-height: 1.45;">
+                                        Replaces static budgets with live burn forecasts. It calculates how many days of cash remain against examination dates and enforces a custom daily spending target.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-3 border h-100">
+                                    <h6 class="fw-bold text-danger mb-1" style="font-size: 0.88rem;">
+                                        <i class="bi bi-shield-lock-fill me-1"></i> 2. Exam Financial Lockout
+                                    </h6>
+                                    <p class="text-muted mb-0 small" style="line-height: 1.45;">
+                                        Automates financial discipline. During critical examination weeks, non-essential lifestyle expenses are locked at the schema level to preserve emergency capital.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-3 border h-100">
+                                    <h6 class="fw-bold text-info mb-1" style="font-size: 0.88rem;">
+                                        <i class="bi bi-calendar2-week me-1"></i> 3. Mon–Sun Study Scheduling
+                                    </h6>
+                                    <p class="text-muted mb-0 small" style="line-height: 1.45;">
+                                        Intelligently organizes lecture preparation, slide consolidation, and revision routines while enforcing mandatory 15-minute recovery intervals to prevent burnout.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="p-3 bg-light rounded-3 border h-100">
+                                    <h6 class="fw-bold text-warning mb-1" style="font-size: 0.88rem;">
+                                        <i class="bi bi-graph-up-arrow me-1"></i> 4. Academic ROI Correlator
+                                    </h6>
+                                    <p class="text-muted mb-0 small" style="line-height: 1.45;">
+                                        Directly calculates the exact cost per credit hour and cost per mastered slide deck, aligning spending with the official university GPA grading scale.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Engineering Implementation & Data Integrity -->
+                    <div class="card border-0 shadow-sm p-4 mb-3 bg-white border-start border-4 border-primary rounded-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary px-2 py-1">Engineering Stack</span>
+                            <h6 class="fw-bold text-dark mb-0">System Architecture & Offline Readiness</h6>
+                        </div>
+                        <ul class="list-unstyled mb-0 small text-muted">
+                            <li class="mb-2">
+                                <strong class="text-dark"><i class="bi bi-cpu text-primary me-2"></i>.NET 8 Blazor Server:</strong> Real-time bi-directional UI updates powered by SignalR web circuits with zero page reloads.
+                            </li>
+                            <li class="mb-2">
+                                <strong class="text-dark"><i class="bi bi-database text-warning me-2"></i>Entity Framework Core & SQLite:</strong> ACID-compliant local database persistence using thread-safe <code class="text-primary">IDbContextFactory</code> patterns.
+                            </li>
+                            <li class="mb-2">
+                                <strong class="text-dark"><i class="bi bi-soundwave text-info me-2"></i>Web Audio API Synthesizer:</strong> Algorithmic focus ambience (brown noise, rainfall) synthesized directly in-browser with zero external asset dependencies.
+                            </li>
+                            <li>
+                                <strong class="text-dark"><i class="bi bi-printer text-success me-2"></i>Executive Document Generation:</strong> Dedicated <code class="text-dark">@@media print</code> CSS architecture producing 1-page authenticated institutional reports.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Developer Accreditation Footer -->
+                    <div class="p-3 bg-white rounded-3 border d-flex flex-wrap justify-content-between align-items-center text-muted small">
+                        <div>
+                            <strong>Engineered by:</strong> Emmanuel Asafo
+                        </div>
+                        <div>
+                            Level 300 Computer Engineering • GCTU
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer Action -->
+                <div class="modal-footer bg-white border-top px-4 py-2 d-flex justify-content-between">
+                    <span class="small text-muted"><i class="bi bi-check-circle-fill text-success me-1"></i>Local Encrypted Build</span>
+                    <button class="btn btn-dark btn-sm px-4" @onclick="Close">Close & Enter System</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private async Task Close()
+    {
+        IsOpen = false;
+        await IsOpenChanged.InvokeAsync(false);
+    }
+}

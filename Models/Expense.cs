@@ -218,3 +218,34 @@ public class StudyScheduleSlot
 
     public bool IsCompleted { get; set; } = false;
 }
+
+public class SystemPreference
+{
+    public int Id { get; set; } = 1;
+
+    // Academic Configuration
+    public DateTime? SemesterStartDate { get; set; } = new DateTime(2026, 8, 15);
+    public DateTime? RevisionWeekStartDate { get; set; } = new DateTime(2026, 11, 20);
+    public DateTime? SemesterEndDate { get; set; } = new DateTime(2026, 12, 18);
+    public TimeSpan DefaultLectureStartTime { get; set; } = new TimeSpan(8, 0, 0);
+    public TimeSpan DefaultLectureEndTime { get; set; } = new TimeSpan(17, 0, 0);
+
+    // Financial & Lockout Defaults
+    public string PreferredCurrency { get; set; } = "GHS";
+    public string DefaultPaymentMethod { get; set; } = "Mobile Money";
+    public bool LockLifestyle { get; set; } = true;
+    public bool LockUtilities { get; set; } = false;
+    public bool LockFoodTakeout { get; set; } = false;
+    public int RunwayAlertThresholdDays { get; set; } = 14;
+
+    // StudySprint & Audio Preferences
+    public int DefaultFocusBlockMinutes { get; set; } = 25;
+    public string DefaultAmbienceTrack { get; set; } = "deep-brown";
+    public bool Enable10MinChime { get; set; } = true;
+
+    // UI & Display
+    public bool IsDarkMode { get; set; } = false;
+    public bool AutoPlaySplashScreen { get; set; } = true;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+}

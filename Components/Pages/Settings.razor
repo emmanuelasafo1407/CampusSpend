@@ -1,0 +1,240 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using CampusSpend.Models
+@using CampusSpend.Data
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>System Settings — CampusSpend</PageTitle>
+
+<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">System Preferences & Settings</h2>
+            <small class="text-muted">Centralized command for academic boundaries, financial defaults, and routine constraints.</small>
+        </div>
+        <div class="d-flex gap-2 mt-2 mt-md-0">
+            <button class="btn btn-primary btn-sm px-4 shadow-sm fw-semibold" @onclick="SavePreferences">
+                <i class="bi bi-check2-circle me-1"></i> Save Changes
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = string.Empty"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- 1. Academic Configuration -->
+        <div class="col-lg-6">
+            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100 border-top border-4 border-primary">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+                    <h5 class="fw-bold text-dark mb-0">Academic Configuration</h5>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary">Semester Timeline Boundaries</label>
+                    <div class="row g-2">
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Semester Start</small>
+                            <input type="date" class="form-control form-control-sm" @bind="pref.SemesterStartDate" />
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Revision Week</small>
+                            <input type="date" class="form-control form-control-sm" @bind="pref.RevisionWeekStartDate" />
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Final Exams Wrap-up</small>
+                            <input type="date" class="form-control form-control-sm" @bind="pref.SemesterEndDate" />
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Defines the active teaching and assessment horizons across StudySprint schedules.</small>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label small fw-semibold text-secondary">Standard Lecture Hours</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Earliest Lecture Start</small>
+                            <input type="time" class="form-control form-control-sm" @bind="lectureStart" />
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block" style="font-size: 0.72rem;">Latest Lecture Conclude</small>
+                            <input type="time" class="form-control form-control-sm" @bind="lectureEnd" />
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Feeds daily routine constraints to prevent planning sessions outside campus class hours.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Financial & Lockout Defaults -->
+        <div class="col-lg-6">
+            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100 border-top border-4 border-danger">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-shield-lock-fill text-danger fs-5"></i>
+                    <h5 class="fw-bold text-dark mb-0">Financial & Lockout Defaults</h5>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-secondary">Preferred Currency</label>
+                        <select class="form-select form-select-sm" @bind="pref.PreferredCurrency">
+                            <option value="GHS">GHS — Ghana Cedi (GH₵)</option>
+                            <option value="USD">USD — US Dollar ($)</option>
+                            <option value="EUR">EUR — Euro (€)</option>
+                            <option value="GBP">GBP — British Pound (£)</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-secondary">Default Payment Method</label>
+                        <select class="form-select form-select-sm" @bind="pref.DefaultPaymentMethod">
+                            <option value="Mobile Money">Mobile Money</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank Transfer">Bank Transfer / Card</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-secondary">Lockout Protected Categories</label>
+                    <div class="p-2 px-3 bg-light rounded border">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" id="lockLifestyle" @bind="pref.LockLifestyle" />
+                            <label class="form-check-label small" for="lockLifestyle">
+                                <strong>Lifestyle & Recreation</strong> (Events, parties, gaming)
+                            </label>
+                        </div>
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" id="lockUtil" @bind="pref.LockUtilities" />
+                            <label class="form-check-label small" for="lockUtil">
+                                Non-Essential Utilities & Subscriptions
+                            </label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="lockFood" @bind="pref.LockFoodTakeout" />
+                            <label class="form-check-label small" for="lockFood">
+                                Luxury Dining & Delivery Takeouts
+                            </label>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Categories barred from the transaction modal while Exam Mode is engaged.</small>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label small fw-semibold text-secondary">Daily Burn Alert Threshold</label>
+                    <select class="form-select form-select-sm" @bind="pref.RunwayAlertThresholdDays">
+                        <option value="7">Under 7 Days (Critical Deficit Hazard)</option>
+                        <option value="14">Under 14 Days (Standard Pre-Exam Warning)</option>
+                        <option value="21">Under 21 Days (Conservative Runway Alert)</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">Triggers high-burn warnings when runway drops below this margin.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. StudySprint & Audio Preferences -->
+        <div class="col-lg-6">
+            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100 border-top border-4 border-info">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-headphones text-info fs-5"></i>
+                    <h5 class="fw-bold text-dark mb-0">StudySprint & Audio Preferences</h5>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-secondary">Default Focus Block Length</label>
+                        <select class="form-select form-select-sm" @bind="pref.DefaultFocusBlockMinutes">
+                            <option value="20">20 Minutes (Sprint Revision)</option>
+                            <option value="25">25 Minutes (Standard Pomodoro)</option>
+                            <option value="40">40 Minutes (Problem Set Review)</option>
+                            <option value="50">50 Minutes (Deep Engineering Block)</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-secondary">Default Ambience Track</label>
+                        <select class="form-select form-select-sm" @bind="pref.DefaultAmbienceTrack">
+                            <option value="deep-brown">🪵 Deep Brown Noise</option>
+                            <option value="binaural-alpha">🌧️ Gentle Rainfall & Flow</option>
+                            <option value="pure-white">📻 Pure White Noise</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded border mb-0">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="chimeToggle" @bind="pref.Enable10MinChime" />
+                        <label class="form-check-label small fw-semibold text-dark" for="chimeToggle">
+                            Enable 10-Minute Synthesizer Chime Reminders
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mt-1">Emits a subtle dual-tone chime every ten minutes during active slide countdowns.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. System Splash Screen Preferences -->
+        <div class="col-lg-6">
+            <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100 border-top border-4 border-warning">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-window-desktop text-warning fs-5"></i>
+                    <h5 class="fw-bold text-dark mb-0">Startup & Interface Options</h5>
+                </div>
+
+                <div class="p-3 bg-light rounded border mb-3">
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" id="splashToggle" @bind="pref.AutoPlaySplashScreen" />
+                        <label class="form-check-label small fw-semibold text-dark" for="splashToggle">
+                            Enable 7-Second Startup Glassmorphic Splash Screen
+                        </label>
+                    </div>
+                    <small class="text-muted d-block">Controls whether the animated launch hero card executes on app launch.</small>
+                </div>
+
+                <div class="p-3 bg-light rounded border">
+                    <span class="small fw-semibold text-secondary d-block mb-1">Data Sovereignty & Persistence</span>
+                    <span class="badge bg-success-subtle text-success border border-success me-2">Thread-Safe SQLite Factory</span>
+                    <span class="badge bg-secondary-subtle text-secondary border">ACID Compliant</span>
+                    <small class="text-muted d-block mt-2">All student entities and preference changes are stored locally in <code class="text-dark">campusspend_v14.db</code>.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private SystemPreference pref = new();
+    private string statusMessage = string.Empty;
+
+    private TimeOnly lectureStart = new TimeOnly(8, 0);
+    private TimeOnly lectureEnd = new TimeOnly(17, 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        pref = await db.SystemPreferences.FirstOrDefaultAsync() ?? new SystemPreference();
+
+        lectureStart = TimeOnly.FromTimeSpan(pref.DefaultLectureStartTime);
+        lectureEnd = TimeOnly.FromTimeSpan(pref.DefaultLectureEndTime);
+    }
+
+    private async Task SavePreferences()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        pref.DefaultLectureStartTime = lectureStart.ToTimeSpan();
+        pref.DefaultLectureEndTime = lectureEnd.ToTimeSpan();
+        pref.UpdatedAt = DateTime.Now;
+
+        db.SystemPreferences.Update(pref);
+        await db.SaveChangesAsync();
+
+        statusMessage = "All system preferences have been saved successfully to the database.";
+    }
+}

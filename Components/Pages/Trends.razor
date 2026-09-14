@@ -8,22 +8,132 @@
 
 <PageTitle>Spending Trends & Academic Portfolio — CampusSpend</PageTitle>
 
-<div class="container-fluid px-4 py-4 min-vh-100 bg-light">
+<style>
+    /* ================= SCREEN VIEW ONLY ================= */
+    .print-only-portfolio {
+        display: none;
+    }
+
+    /* ================= PRINT ENGINE ================= */
+    @@media print {
+        @@page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+        }
+
+        /* 1. Wipe everything from screen layout completely */
+        body * {
+            visibility: hidden !important;
+        }
+
+        body, html {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .screen-only-analytics,
+        .sidebar,
+        .navbar,
+        .top-row,
+        header,
+        nav,
+        .btn,
+        a {
+            display: none !important;
+        }
+
+        /* 2. Elevate the dedicated print sheet to full page */
+        .print-only-portfolio, 
+        .print-only-portfolio * {
+            visibility: visible !important;
+        }
+
+        .print-only-portfolio {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            color: #1a1a1a !important;
+        }
+
+        /* Exact spacing & layout rules for single-page fit */
+        .p-card {
+            border: 1px solid #d0d7de !important;
+            border-radius: 6px !important;
+            background: #ffffff !important;
+            padding: 8px 12px !important;
+            margin-bottom: 8px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        .p-flex-row {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            gap: 10px !important;
+            width: 100% !important;
+        }
+
+        .p-flex-between {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+        }
+
+        .p-col-4 { flex: 1 1 25% !important; }
+        .p-col-5 { flex: 0 0 38% !important; max-width: 38% !important; }
+        .p-col-7 { flex: 0 0 62% !important; max-width: 62% !important; }
+        .p-col-6 { flex: 1 1 50% !important; max-width: 50% !important; }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 0.74rem !important;
+        }
+
+        table td, table th {
+            padding: 3px 5px !important;
+        }
+
+        svg {
+            display: block !important;
+            margin: 0 auto !important;
+            max-width: 105px !important;
+            max-height: 105px !important;
+        }
+    }
+</style>
+
+<!-- ========================================================================= -->
+<!-- 1. SCREEN-ONLY INTERACTIVE DASHBOARD VIEW (NOW FULLY MATCHES PRINT AUDIT) -->
+<!-- ========================================================================= -->
+<div class="screen-only-analytics container-fluid px-4 py-4 min-vh-100 bg-light">
     
-    <!-- Top Header & Print Export Button -->
+    <!-- Top Bar -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0">Analytics & Academic Capital ROI</h2>
             <small class="text-muted">Analyze expenditure velocity, academic return on investment, and generate official portfolio audits.</small>
         </div>
         <div class="d-flex gap-2 mt-2 mt-md-0">
-            <button class="btn btn-outline-dark btn-sm shadow-sm" @onclick="TriggerPrintReport">
+            <button class="btn btn-dark btn-sm shadow-sm" @onclick="TriggerPrintReport">
                 <i class="bi bi-printer-fill me-1"></i> Print / Export Semester Audit
             </button>
         </div>
     </div>
 
-    <!-- FEATURE 2: Academic ROI & Capital-to-Grade Correlator -->
+    <!-- Section 1: Academic ROI Cards -->
     <div class="card stat-card shadow-sm border-0 mb-4 p-4 bg-white border-start border-4 border-warning">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
@@ -34,7 +144,7 @@
             </div>
             <div class="text-end">
                 <small class="text-muted d-block">Target Semester Standing</small>
-                <span class="badge bg-success fs-6">@AcademicStanding</span>
+                <span class="badge @(ProjectedGPA > 0 ? "bg-success" : "bg-secondary") fs-6">@AcademicStanding</span>
             </div>
         </div>
 
@@ -55,7 +165,7 @@
             </div>
             <div class="col-sm-6 col-lg-3">
                 <div class="p-3 bg-light rounded-3 border">
-                    <small class="text-muted text-uppercase d-block fw-semibold" style="font-size: 0.72rem;">Cost Per Mastered Slide Deck</small>
+                    <small class="text-muted text-uppercase d-block fw-semibold" style="font-size: 0.72rem;">Cost Per Mastered Slide</small>
                     <div class="fs-4 fw-bold text-success mt-1">GHS @CostPerMasteredSlide.ToString("F2")</div>
                     <small class="text-muted">@TotalMasteredSlides / @TotalSlides slides mastered</small>
                 </div>
@@ -70,9 +180,8 @@
         </div>
     </div>
 
-    <!-- Graphical Breakdown: SVG Pie Chart & Category Table -->
+    <!-- Section 2: Charts and Detailed Table -->
     <div class="row g-4 mb-4">
-        <!-- SVG Pie Chart -->
         <div class="col-lg-5">
             <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100">
                 <h6 class="fw-bold text-dark mb-3">Expenditure Distribution</h6>
@@ -83,16 +192,16 @@
                 else
                 {
                     <div class="d-flex justify-content-center align-items-center mb-3">
-                        <svg width="200" height="200" viewBox="-1 -1 2 2" style="transform: rotate(-90deg);">
+                        <svg width="180" height="180" viewBox="-1 -1 2 2" style="transform: rotate(-90deg);">
                             @{
-                                double accumulatedAngle = 0;
+                                double accAngle = 0;
                                 foreach (var cat in CategoryBreakdowns)
                                 {
                                     if (cat.Amount == 0) continue;
                                     double portion = (double)(cat.Amount / TotalSpent);
-                                    double startAngle = accumulatedAngle;
-                                    double endAngle = accumulatedAngle + portion * 2 * Math.PI;
-                                    accumulatedAngle = endAngle;
+                                    double startAngle = accAngle;
+                                    double endAngle = accAngle + portion * 2 * Math.PI;
+                                    accAngle = endAngle;
 
                                     double x1 = Math.Cos(startAngle);
                                     double y1 = Math.Sin(startAngle);
@@ -120,7 +229,6 @@
             </div>
         </div>
 
-        <!-- 7-Day Velocity Flow & Category Outflow Table -->
         <div class="col-lg-7">
             <div class="card stat-card shadow-sm border-0 p-4 bg-white h-100">
                 <h6 class="fw-bold text-dark mb-3">Detailed Category Breakdown & Audit</h6>
@@ -158,48 +266,349 @@
         </div>
     </div>
 
-    <!-- FEATURE 4: Printable Semester Executive Audit Section (Visible on Screen & Cleanly Formatted for Print) -->
-    <div class="card stat-card shadow-sm border-0 p-4 bg-white mt-4" id="printableReportSection">
-        <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+    <!-- Section 3: Financial Health & Academic Standing Dual Audit (Now also displayed on Screen) -->
+    <div class="card stat-card shadow-sm border-0 p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
             <div>
-                <h4 class="fw-bold text-dark mb-0">CampusSpend Semester Executive Audit</h4>
-                <small class="text-muted">Consolidated Financial & Academic Standing Record · Generated on @DateTime.Now.ToString("dd MMMM yyyy")</small>
+                <h5 class="fw-bold text-dark mb-0">CampusSpend Semester Executive Audit</h5>
+                <small class="text-muted">Consolidated Financial Pacing & Academic Progress Standing</small>
             </div>
-            <span class="badge bg-dark px-3 py-2">Official Student Hub Record</span>
+            <span class="badge bg-dark px-3 py-2">Official Record</span>
         </div>
 
-        <div class="row g-3 mb-4">
+        <div class="row g-4">
+            <!-- Left: Financial Overview -->
             <div class="col-md-6 border-end">
-                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-wallet2 me-1"></i> Financial Health Audit</h6>
-                <ul class="list-unstyled small mb-0">
-                    <li class="d-flex justify-content-between py-1"><span>Total Semester Expenditure:</span> <strong>GHS @TotalSpent.ToString("N2")</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Budget Cap:</span> <strong>GHS @(activeBudget?.TargetAmount.ToString("N2") ?? "0.00")</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Total Capital Saved to Goals:</span> <strong>GHS @goals.Where(g => g.GoalType == "Financial").Sum(g => g.CurrentSaved).ToString("N2")</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Hall of Achievements Unlocked:</span> <strong>@goals.Count(g => g.IsArchived) Goals</strong></li>
-                </ul>
+                <h6 class="fw-bold text-primary mb-3"><i class="bi bi-wallet2 me-2"></i>Financial Health Summary</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tbody>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Total Semester Expenditure:</td>
+                            <td class="text-end fw-bold py-2">GHS @TotalSpent.ToString("N2")</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Budget Spending Cap:</td>
+                            <td class="text-end fw-bold py-2">GHS @(activeBudget?.TargetAmount.ToString("N2") ?? "0.00")</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Capital Saved into Goals:</td>
+                            <td class="text-end fw-bold text-success py-2">GHS @activeGoals.Where(g => g.GoalType == "Financial").Sum(g => g.CurrentSaved).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted py-2">Target Daily Burn Pacing:</td>
+                            <td class="text-end fw-bold py-2">GHS @(activeBudget?.CustomDailyTarget.ToString("F2") ?? "25.00") / day</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="col-md-6 ps-md-4">
-                <h6 class="fw-bold text-success mb-2"><i class="bi bi-mortarboard-fill me-1"></i> Academic Progress Audit</h6>
-                <ul class="list-unstyled small mb-0">
-                    <li class="d-flex justify-content-between py-1"><span>Registered Courses:</span> <strong>@courses.Count Courses (@TotalCredits Credits)</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Projected Semester GPA:</span> <strong class="text-success">@ProjectedGPA.ToString("F2") (@AcademicStanding)</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Overall Slide Deck Coverage:</span> <strong>@TotalMasteredSlides / @TotalSlides Slides (@(TotalSlides > 0 ? (TotalMasteredSlides * 100 / TotalSlides) : 0)%)</strong></li>
-                    <li class="d-flex justify-content-between py-1"><span>Engineering Projects Underway:</span> <strong>@goals.Count(g => g.GoalType == "PersonalProject" && !g.IsArchived) Active</strong></li>
-                </ul>
-            </div>
-        </div>
 
-        <div class="alert alert-light border small text-muted mb-0">
-            <i class="bi bi-check-circle-fill text-success me-1"></i>
-            This audit report certifies that all expense records, slide completions, and milestone logs are authenticated within the student's local encrypted SQLite database.
+            <!-- Right: Academic Overview -->
+            <div class="col-md-6 ps-md-4">
+                <h6 class="fw-bold text-success mb-3"><i class="bi bi-mortarboard-fill me-2"></i>Academic Standing Summary</h6>
+                <table class="table table-sm table-borderless small mb-0">
+                    <tbody>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Registered Courses:</td>
+                            <td class="text-end fw-bold py-2">@courses.Count Courses (@TotalCredits Credits)</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Projected Semester GPA:</td>
+                            <td class="text-end fw-bold text-success py-2">@ProjectedGPA.ToString("F2") (@AcademicStanding)</td>
+                        </tr>
+                        <tr class="border-bottom">
+                            <td class="text-muted py-2">Syllabus Deck Mastery:</td>
+                            <td class="text-end fw-bold py-2">@TotalMasteredSlides / @TotalSlides Slides (@SlidePercentage.ToString("F0")%)</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted py-2">Academic Capital Efficiency:</td>
+                            <td class="text-end fw-bold text-primary py-2">GHS @CostPerCreditHour.ToString("F2") / Credit</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
+    <!-- Section 4: Claimed Achievements Showcase on Screen -->
+    <div class="card stat-card shadow-sm border-0 p-4 bg-white mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-trophy-fill text-warning fs-4"></i>
+                <h5 class="fw-bold text-dark mb-0">Hall of Claimed Achievements (@achievedGoals.Count)</h5>
+            </div>
+            <span class="badge bg-success-subtle text-success border border-success px-3 py-1">Permanent Record</span>
+        </div>
+
+        @if (!achievedGoals.Any())
+        {
+            <div class="p-3 text-muted small bg-light rounded text-center">
+                No achievements claimed yet. Complete a target on the Goals page and click "Claim to Achievements" to display it here.
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var a in achievedGoals)
+                {
+                    <div class="col-md-6 col-lg-4">
+                        <div class="p-3 border rounded-3 bg-light border-start border-3 border-success">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="text-success fs-6">🏆 @a.Title</strong>
+                                <span class="badge bg-success">Unlocked</span>
+                            </div>
+                            <div class="small text-muted mb-1">
+                                Type: <strong>@(a.GoalType == "AcademicAssignment" ? "Assignment" : a.GoalType == "PersonalProject" ? "Personal Project" : "Financial")</strong>
+                            </div>
+                            <small class="text-muted">Claimed on: @(a.CompletedAt?.ToString("dd MMM yyyy") ?? "Recently")</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 2. DEDICATED CUSTOM PRINTED PORTFOLIO SHEET (Visible ONLY when printing)  -->
+<!-- ========================================================================= -->
+<div class="print-only-portfolio">
+    
+    <!-- Customized App Header & Logo Banner -->
+    <div class="p-flex-between" style="border-bottom: 2px solid #0d6efd; padding-bottom: 6px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 34px; height: 34px; border-radius: 6px; background: #0d6efd; display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 18px; font-weight: bold;">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; font-weight: 800; color: #0d6efd; letter-spacing: -0.5px; font-size: 1.25rem;">
+                    CampusSpend <span style="font-weight: 400; color: #495057;">| StudySprint</span>
+                </h3>
+                <small style="color: #6c757d; font-size: 0.68rem;">Student Financial Command & Academic Performance System</small>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="background: #212529; color: #ffffff; font-weight: bold; font-size: 0.65rem; padding: 2px 7px; border-radius: 4px; display: inline-block;">
+                SEMESTER EXECUTIVE AUDIT
+            </div>
+            <div style="color: #6c757d; font-size: 0.68rem; margin-top: 2px;">
+                Generated: <strong>@DateTime.Now.ToString("dd MMMM yyyy")</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top KPI Grid -->
+    <div class="p-card">
+        <div class="p-flex-between" style="margin-bottom: 4px;">
+            <span style="font-weight: bold; font-size: 0.76rem; color: #b45309;">
+                <i class="bi bi-mortarboard-fill" style="margin-right: 4px;"></i>Academic Return On Investment (ROI)
+            </span>
+            <span style="background: #e6f4ea; color: #137333; font-weight: bold; font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #ceead6;">
+                Standing: @AcademicStanding
+            </span>
+        </div>
+        <div class="p-flex-row text-center">
+            <div class="p-col-4" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 4px;">
+                <div style="font-size: 0.62rem; color: #6c757d; text-transform: uppercase; font-weight: 600;">Capital Invested</div>
+                <div style="font-size: 0.92rem; font-weight: bold; color: #b45309; margin: 1px 0;">GHS @AcademicSpend.ToString("N2")</div>
+                <div style="font-size: 0.62rem; color: #6c757d;">Course Materials</div>
+            </div>
+            <div class="p-col-4" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 4px;">
+                <div style="font-size: 0.62rem; color: #6c757d; text-transform: uppercase; font-weight: 600;">Cost Per Credit</div>
+                <div style="font-size: 0.92rem; font-weight: bold; color: #0d6efd; margin: 1px 0;">GHS @CostPerCreditHour.ToString("F2")</div>
+                <div style="font-size: 0.62rem; color: #6c757d;">Across @TotalCredits Credits</div>
+            </div>
+            <div class="p-col-4" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 4px;">
+                <div style="font-size: 0.62rem; color: #6c757d; text-transform: uppercase; font-weight: 600;">Cost Per Slide</div>
+                <div style="font-size: 0.92rem; font-weight: bold; color: #198754; margin: 1px 0;">GHS @CostPerMasteredSlide.ToString("F2")</div>
+                <div style="font-size: 0.62rem; color: #6c757d;">@TotalMasteredSlides / @TotalSlides Mastered</div>
+            </div>
+            <div class="p-col-4" style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 4px;">
+                <div style="font-size: 0.62rem; color: #6c757d; text-transform: uppercase; font-weight: 600;">Projected GPA</div>
+                <div style="font-size: 0.92rem; font-weight: bold; color: #212529; margin: 1px 0;">@ProjectedGPA.ToString("F2") / 4.00</div>
+                <div style="font-size: 0.62rem; color: #6c757d;">GCTU Scheme</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mid Row: SVG Breakdown & Category Ledger -->
+    <div class="p-flex-row" style="margin-bottom: 8px;">
+        <div class="p-col-5 p-card" style="margin-bottom: 0;">
+            <div style="font-weight: bold; font-size: 0.74rem; margin-bottom: 4px;">Expenditure Distribution</div>
+            @if (TotalSpent == 0)
+            {
+                <div style="padding: 15px; text-align: center; color: #6c757d; font-size: 0.72rem;">No recorded expenses</div>
+            }
+            else
+            {
+                <div style="display: flex; justify-content: center; margin-bottom: 4px;">
+                    <svg width="95" height="95" viewBox="-1 -1 2 2" style="transform: rotate(-90deg);">
+                        @{
+                            double printAccAngle = 0;
+                            foreach (var cat in CategoryBreakdowns)
+                            {
+                                if (cat.Amount == 0) continue;
+                                double portion = (double)(cat.Amount / TotalSpent);
+                                double startAngle = printAccAngle;
+                                double endAngle = printAccAngle + portion * 2 * Math.PI;
+                                printAccAngle = endAngle;
+
+                                double x1 = Math.Cos(startAngle);
+                                double y1 = Math.Sin(startAngle);
+                                double x2 = Math.Cos(endAngle);
+                                double y2 = Math.Sin(endAngle);
+                                int largeArc = portion > 0.5 ? 1 : 0;
+                                string pathData = $"M 0 0 L {x1:F4} {y1:F4} A 1 1 0 {largeArc} 1 {x2:F4} {y2:F4} Z";
+
+                                <path d="@pathData" fill="@cat.ColorHex" />
+                            }
+                        }
+                    </svg>
+                </div>
+
+                <div style="font-size: 0.68rem;">
+                    @foreach (var cat in CategoryBreakdowns)
+                    {
+                        <div class="p-flex-between" style="padding: 1px 0; border-bottom: 1px dashed #f1f3f5;">
+                            <span>
+                                <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: @cat.ColorHex; margin-right: 3px;"></span>
+                                @cat.Category
+                            </span>
+                            <span style="font-weight: 600;">
+                                GHS @cat.Amount.ToString("N2") 
+                                <small style="color: #6c757d; font-weight: normal;">(@(TotalSpent > 0 ? (cat.Amount / TotalSpent * 100).ToString("F0") : "0")%)</small>
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="p-col-7 p-card" style="margin-bottom: 0;">
+            <div style="font-weight: bold; font-size: 0.74rem; margin-bottom: 4px;">Category Outflow Ledger</div>
+            <table>
+                <thead>
+                    <tr style="border-bottom: 1px solid #dee2e6; color: #6c757d;">
+                        <th style="text-align: left;">Category</th>
+                        <th style="text-align: center;">Entries</th>
+                        <th style="text-align: right;">Total Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var cat in CategoryBreakdowns)
+                    {
+                        <tr style="border-bottom: 1px solid #f8f9fa;">
+                            <td>
+                                <span style="display: inline-block; width: 5px; height: 5px; background: @cat.ColorHex; margin-right: 3px;"></span>
+                                <strong>@cat.Category</strong>
+                            </td>
+                            <td style="text-align: center; color: #6c757d;">@cat.EntryCount</td>
+                            <td style="text-align: right; font-weight: bold;">GHS @cat.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Financial Health & Academic Standing Dual Columns -->
+    <div class="p-card">
+        <div class="p-flex-row">
+            <div class="p-col-6" style="border-right: 1px solid #e9ecef; padding-right: 10px;">
+                <div style="font-weight: bold; font-size: 0.74rem; color: #0d6efd; margin-bottom: 3px;">
+                    <i class="bi bi-wallet2" style="margin-right: 3px;"></i>Financial Health Audit
+                </div>
+                <table>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Total Expenditure:</td>
+                            <td style="text-align: right; font-weight: bold;">GHS @TotalSpent.ToString("N2")</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Budget Cap:</td>
+                            <td style="text-align: right; font-weight: bold;">GHS @(activeBudget?.TargetAmount.ToString("N2") ?? "0.00")</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Saved into Goals:</td>
+                            <td style="text-align: right; font-weight: bold; color: #198754;">GHS @activeGoals.Where(g => g.GoalType == "Financial").Sum(g => g.CurrentSaved).ToString("N2")</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6c757d;">Daily Burn Target:</td>
+                            <td style="text-align: right; font-weight: bold;">GHS @(activeBudget?.CustomDailyTarget.ToString("F2") ?? "25.00") / day</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-col-6" style="padding-left: 6px;">
+                <div style="font-weight: bold; font-size: 0.74rem; color: #198754; margin-bottom: 3px;">
+                    <i class="bi bi-mortarboard-fill" style="margin-right: 3px;"></i>Academic Standing Audit
+                </div>
+                <table>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Registered Courses:</td>
+                            <td style="text-align: right; font-weight: bold;">@courses.Count Courses (@TotalCredits Credits)</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Projected GPA:</td>
+                            <td style="text-align: right; font-weight: bold; color: #198754;">@ProjectedGPA.ToString("F2") (@AcademicStanding)</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #f1f3f5;">
+                            <td style="color: #6c757d;">Syllabus Mastery:</td>
+                            <td style="text-align: right; font-weight: bold;">@TotalMasteredSlides / @TotalSlides Slides (@SlidePercentage.ToString("F0")%)</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #6c757d;">Capital Efficiency:</td>
+                            <td style="text-align: right; font-weight: bold; color: #0d6efd;">GHS @CostPerCreditHour.ToString("F2") / Credit</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- EXPLICIT UNLOCKED ACHIEVEMENTS & HONORS LIST IN PRINT -->
+    <div class="p-card" style="margin-bottom: 8px;">
+        <div class="p-flex-between" style="margin-bottom: 4px;">
+            <span style="font-weight: bold; font-size: 0.74rem; color: #198754;">
+                <i class="bi bi-award-fill" style="margin-right: 4px;"></i>Hall of Achievements Unlocked (@achievedGoals.Count Claimed)
+            </span>
+            <span style="font-size: 0.65rem; color: #6c757d;">Verified Milestones</span>
+        </div>
+        @if (!achievedGoals.Any())
+        {
+            <div style="font-size: 0.68rem; color: #6c757d; font-style: italic;">No claimed milestones yet.</div>
+        }
+        else
+        {
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                @foreach (var ach in achievedGoals)
+                {
+                    <div style="background: #f8f9fa; border: 1px solid #198754; border-radius: 4px; padding: 3px 8px; font-size: 0.68rem; display: flex; align-items: center; gap: 6px;">
+                        <strong style="color: #198754;">🏆 @ach.Title</strong>
+                        <span style="color: #6c757d; font-size: 0.62rem;">(@(ach.GoalType == "AcademicAssignment" ? "Assignment" : ach.GoalType == "PersonalProject" ? "Personal Project" : "Financial") · @(ach.CompletedAt?.ToString("dd MMM yyyy") ?? "Claimed"))</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Official Certification Footer -->
+    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 4px 8px; font-size: 0.62rem; color: #6c757d; display: flex; align-items: center; justify-content: space-between;">
+        <span>
+            <i class="bi bi-check-circle-fill" style="color: #198754; margin-right: 3px;"></i>
+            Certified electronic semester audit generated by <strong>CampusSpend & StudySprint</strong>.
+        </span>
+        <span>Record ID: CPEN-@(DateTime.Now.ToString("yyyyMMdd"))</span>
+    </div>
+
 </div>
 
 @code {
     private List<Expense> expenses = new();
     private List<SemesterCourse> courses = new();
-    private List<SavingsGoal> goals = new();
+    private List<SavingsGoal> activeGoals = new();
+    private List<SavingsGoal> achievedGoals = new();
     private BudgetSetting? activeBudget;
 
     private decimal TotalSpent => expenses.Sum(e => e.Amount);
@@ -209,8 +618,10 @@
     private int TotalSlides => courses.Sum(c => c.TotalSlides);
     private int TotalMasteredSlides => courses.Sum(c => c.CoveredSlides);
 
-    private decimal CostPerCreditHour => TotalCredits > 0 ? AcademicSpend / TotalCredits : 0;
-    private decimal CostPerMasteredSlide => TotalMasteredSlides > 0 ? AcademicSpend / TotalMasteredSlides : 0;
+    private double SlidePercentage => TotalSlides > 0 ? ((double)TotalMasteredSlides / TotalSlides) * 100.0 : 0.0;
+
+    private decimal CostPerCreditHour => TotalCredits > 0 ? AcademicSpend / (decimal)TotalCredits : 0.00m;
+    private decimal CostPerMasteredSlide => TotalMasteredSlides > 0 ? AcademicSpend / (decimal)TotalMasteredSlides : 0.00m;
 
     private double ProjectedGPA =>
         TotalCredits > 0
@@ -244,12 +655,19 @@
         using var db = await DbFactory.CreateDbContextAsync();
         expenses = await db.Expenses.ToListAsync();
         courses = await db.SemesterCourses.ToListAsync();
-        goals = await db.SavingsGoals.ToListAsync();
+        
+        activeGoals = await db.SavingsGoals.Where(g => !g.IsArchived).ToListAsync();
+        achievedGoals = await db.SavingsGoals.Where(g => g.IsArchived).OrderByDescending(g => g.CompletedAt).ToListAsync();
+
         activeBudget = await db.BudgetSettings.FirstOrDefaultAsync();
     }
 
     private async Task TriggerPrintReport()
     {
-        await JS.InvokeVoidAsync("printPage");
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "window.print()");
+        }
+        catch { }
     }
 }
